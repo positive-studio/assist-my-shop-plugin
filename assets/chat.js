@@ -1,0 +1,620 @@
+class WooAIChat {
+    constructor() {
+        this.isOpen = false;
+        this.sessionId = this.generateSessionId();
+        this.messages = [];
+        this.messagesContainer = document.getElementById('woo-ai-chat-messages');
+        this.init();
+    }
+
+    init() {
+        this.setGreetingMessage()
+        this.createChatWidget();
+        this.bindEvents();
+        this.loadChatHistory();
+    }
+
+    setGreetingMessage() {
+        this.greetingMessage = 'Hello! How can I help you today?';
+        if (typeof wooAi?.assistantName !== "undefined" && wooAi?.assistantName) {
+            this.greetingMessage = `Hello! My name is ${wooAi.assistantName}! How can I help you today?`
+        }
+    }
+
+    createChatWidget() {
+        const widget = document.getElementById('woo-ai-chat-widget');
+        if (widget) {
+            widget.style.display = 'block';
+        }
+    }
+
+    bindEvents() {
+        const toggle = document.getElementById('woo-ai-chat-toggle');
+        const close = document.getElementById('woo-ai-chat-close');
+        const input = document.getElementById('woo-ai-chat-input');
+        const send = document.getElementById('woo-ai-chat-send');
+
+        if (toggle) {
+            toggle.addEventListener('click', () => this.toggleChat());
+        }
+
+        if (close) {
+            close.addEventListener('click', () => this.closeChat());
+        }
+
+        if (send) {
+            send.addEventListener('click', () => this.sendMessage());
+        }
+
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.sendMessage();
+                }
+            });
+        }
+    }
+
+    toggleChat() {
+        const container = document.getElementById('woo-ai-chat-container');
+        if (container) {
+            this.isOpen = !this.isOpen;
+            container.style.display = this.isOpen ? 'flex' : 'none';
+            
+            if (this.isOpen) {
+                if (this.messages.length === 0) {
+                    this.addMessage('assistant', this.greetingMessage);
+                }
+
+                this.scrollDownMessages();
+            }
+
+
+        }
+    }
+
+    scrollDownMessages() {
+        this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+    }
+
+    closeChat() {
+        const container = document.getElementById('woo-ai-chat-container');
+        if (container) {
+            this.isOpen = false;
+            container.style.display = 'none';
+        }
+    }
+
+    async sendMessage() {
+        const input = document.getElementById('woo-ai-chat-input');
+        const message = input.value.trim();
+
+        if (!message) return;
+
+        // Add user message to UI
+        this.addMessage('user', message);
+        input.value = '';
+
+        // Check if streaming is supported and enabled
+        if (this.isStreamingSupported()) {
+            this.sendMessageStreaming(message);
+        } else {
+            this.sendMessageNonStreaming(message);
+        }
+    }
+
+    isStreamingSupported() {
+        // Check if EventSource is supported and if we have a streaming endpoint
+        return typeof EventSource !== 'undefined' && wooAi.wooAiAjax.streaming_enabled;
+    }
+
+    async sendMessageStreaming(message) {
+        // Show streaming typing indicator
+        this.showStreamingTyping();
+
+        try {
+            console.log('Starting streaming request to:', wooAi.wooAiAjax.ajax_url);
+            
+            // Use WordPress AJAX endpoint for streaming to avoid CORS issues
+            const params = new URLSearchParams({
+                action: 'woo_ai_chat_stream',
+                nonce: wooAi.wooAiAjax.nonce,
+                message: message,
+                session_id: this.sessionId,
+            });
+
+            console.log('Streaming params:', params.toString());
+
+            // Make streaming request through WordPress AJAX
+            const response = await fetch(wooAi.wooAiAjax.ajax_url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'text/event-stream',
+                },
+                body: params,
+            });
+
+            console.log('Streaming response status:', response.status, response.statusText);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            // Handle streaming response
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let assistantMessageDiv = null;
+            let fullContent = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            
+                            if (data.type === 'session' && data.session_id) {
+                                this.sessionId = data.session_id;
+                            } else if (data.type === 'token' && data.content) {
+                                // Create assistant message div if it doesn't exist
+                                if (!assistantMessageDiv) {
+                                    this.hideStreamingTyping();
+                                    assistantMessageDiv = this.createStreamingMessage();
+                                }
+                                
+                                fullContent += data.content;
+                                this.updateStreamingMessage(assistantMessageDiv, fullContent);
+                            } else if (data.type === 'done') {
+                                // Streaming complete
+                                if (assistantMessageDiv) {
+                                    this.finalizeStreamingMessage(assistantMessageDiv, data.full_content || fullContent);
+                                }
+                                break;
+                            } else if (data.error) {
+                                throw new Error(data.error);
+                            }
+                        } catch (parseError) {
+                            console.warn('Failed to parse SSE data:', line, parseError);
+                        }
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error('Streaming error:', error);
+            this.hideStreamingTyping();
+            
+            // Fallback to non-streaming if streaming fails
+            console.log('Falling back to non-streaming mode...');
+            this.sendMessageNonStreaming(message);
+        }
+    }
+
+    async sendMessageNonStreaming(message) {
+        // Show typing indicator
+        this.showTyping();
+
+        try {
+            const response = await fetch(wooAi.wooAiAjax.ajax_url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'woo_ai_chat',
+                    nonce: wooAi.wooAiAjax.nonce,
+                    message: message,
+                    session_id: this.sessionId,
+                }),
+            });
+
+            const data = await response.json();
+            this.hideTyping();
+
+            if (data.success) {
+                this.addMessage('assistant', data.message);
+                if (data.session_id) {
+                    this.sessionId = data.session_id;
+                }
+            } else {
+                this.addMessage('assistant', data.error || 'Sorry, I encountered an error. Please try again.');
+            }
+        } catch (error) {
+            this.hideTyping();
+            this.addMessage('assistant', 'Sorry, I\'m having trouble connecting. Please try again later.');
+        }
+    }
+
+    addMessage(type, content, messageTime = false) {
+        if (!this.messagesContainer) return;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `woo-ai-message woo-ai-message-${type}`;
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'woo-ai-message-content';
+        messageContent.innerHTML = this.formatMessageContent(content);
+
+        const messageDate = messageTime ? new Date(messageTime) : new Date();
+        const timestamp = document.createElement('div');
+        timestamp.className = 'woo-ai-message-timestamp';
+        timestamp.textContent = messageDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        messageDiv.appendChild(messageContent);
+        messageDiv.appendChild(timestamp);
+        this.messagesContainer.appendChild(messageDiv);
+
+        // Scroll to bottom
+        this.scrollDownMessages();
+
+        this.messages.push({ type, content, timestamp: messageDate });
+    }
+
+    formatMessageContent(content) {
+        // Check if content contains HTML product cards mixed with text
+        if (content.includes('<div class="woo-ai-products-grid"') || 
+            content.includes('<div class="woo-ai-product-card"') ||
+            (content.includes('<img src=') && content.includes('View Product'))) {
+            
+            // Split the content into text part and HTML part
+            const htmlMatch = content.match(/(<div class="woo-ai-products-grid">.*?<\/div>)$/s);
+            if (htmlMatch) {
+                const htmlPart = htmlMatch[1];
+                const textPart = content.replace(htmlMatch[0], '').trim();
+                
+                // Process the text part normally (with Markdown, line breaks, etc.)
+                const processedText = this.formatTextContent(textPart);
+                
+                // Combine processed text with sanitized HTML
+                return processedText + '<br><br>' + this.sanitizeProductHTML(htmlPart);
+            }
+            
+            // Fallback: treat entire content as product HTML
+            return this.sanitizeProductHTML(content);
+        }
+
+        // Pure text content - use the dedicated text formatting method
+        return this.formatTextContent(content);
+    }
+
+    formatTextContent(content) {
+        // This method handles pure text content (no mixed HTML)
+        
+        // First, handle literal \n characters (convert them to actual newlines)
+        content = content.replace(/\\n/g, '\n');
+        // Process content safely by escaping HTML first, then applying Markdown
+        let processedContent = content; //this.escapeHtmlSafely(content);
+        // Apply markdown formatting
+        processedContent = this.parseMarkdown(processedContent);
+        // Replace URLs with clickable links
+        processedContent = this.convertMarkdownLinksToHtml(processedContent);
+        // Convert line breaks to <br> tags
+        processedContent = processedContent.replace(/\n/g, '<br>');
+
+        return processedContent;
+    }
+
+    convertMarkdownLinksToHtml(text) {
+        return text.replace(
+            /\[([^\]]+)\]\(([^)]+)\)/g,
+            '<a target="_blank" rel="noopener noreferrer" class="woo-ai-link" href="$2">$1</a>'
+        );
+    }
+
+    escapeHtmlSafely(text) {
+        // Escape HTML but preserve Markdown syntax characters
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    parseMarkdown(text) {
+        // Parse common Markdown syntax - work with HTML entities since text is escaped
+        let parsed = text;
+
+        // Bold text: **text** or __text__ 
+        // Handle both regular and HTML entity versions more reliably
+        parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        parsed = parsed.replace(/__(.*?)__/g, '<strong>$1</strong>');
+        parsed = parsed.replace(/&#42;&#42;(.*?)&#42;&#42;/g, '<strong>$1</strong>');
+        parsed = parsed.replace(/&#95;&#95;(.*?)&#95;&#95;/g, '<strong>$1</strong>');
+
+        // Italic text: *text* or _text_ (avoid conflicts with bold by processing bold first)
+        // Since we already processed ** above, single * should be safe for italic
+        parsed = parsed.replace(/\*([^*\s][^*]*?[^*\s]?)\*/g, '<em>$1</em>');
+        parsed = parsed.replace(/_([^_\s][^_]*?[^_\s]?)_/g, '<em>$1</em>');
+        
+        // HTML entity versions for italic (single entities only)
+        parsed = parsed.replace(/&#42;([^&#42;\s][^&#42;]*?[^&#42;\s]?)&#42;/g, '<em>$1</em>');
+        parsed = parsed.replace(/&#95;([^&#95;\s][^&#95;]*?[^&#95;\s]?)&#95;/g, '<em>$1</em>');
+
+        // Inline code: `code`
+        parsed = parsed.replace(/`([^`]+?)`/g, '<code class="woo-ai-inline-code">$1</code>');
+        parsed = parsed.replace(/&#96;([^&#96;]+?)&#96;/g, '<code class="woo-ai-inline-code">$1</code>');
+
+        // Strikethrough: ~~text~~
+        parsed = parsed.replace(/~~(.*?)~~/g, '<del>$1</del>');
+        parsed = parsed.replace(/&#126;&#126;(.*?)&#126;&#126;/g, '<del>$1</del>');
+
+        // Headers: # Header (only at start of line or after <br>)
+        parsed = parsed.replace(/(^|<br>)### (.*?)(<br>|$)/g, '$1<h3 class="woo-ai-header">$2</h3>$3');
+        parsed = parsed.replace(/(^|<br>)## (.*?)(<br>|$)/g, '$1<h2 class="woo-ai-header">$2</h2>$3');
+        parsed = parsed.replace(/(^|<br>)# (.*?)(<br>|$)/g, '$1<h1 class="woo-ai-header">$2</h1>$3');
+        
+        // HTML entity versions
+        parsed = parsed.replace(/(^|<br>)&#35;&#35;&#35; (.*?)(<br>|$)/g, '$1<h3 class="woo-ai-header">$2</h3>$3');
+        parsed = parsed.replace(/(^|<br>)&#35;&#35; (.*?)(<br>|$)/g, '$1<h2 class="woo-ai-header">$2</h2>$3');
+        parsed = parsed.replace(/(^|<br>)&#35; (.*?)(<br>|$)/g, '$1<h1 class="woo-ai-header">$2</h1>$3');
+
+        // Unordered lists: - item or * item (at start of line or after <br>)
+        parsed = parsed.replace(/(^|<br>)[-*] (.*?)(<br>|$)/g, '$1<li class="woo-ai-list-item">$2</li>$3');
+        parsed = parsed.replace(/(^|<br>)&#45; (.*?)(<br>|$)/g, '$1<li class="woo-ai-list-item">$2</li>$3');
+        parsed = parsed.replace(/(^|<br>)&#42; (.*?)(<br>|$)/g, '$1<li class="woo-ai-list-item">$2</li>$3');
+        
+        // Wrap consecutive list items in <ul>
+        parsed = parsed.replace(/(<li class="woo-ai-list-item">.*?<\/li>(?:<br>)?)+/g, (match) => {
+            return '<ul class="woo-ai-list">' + match.replace(/<br>/g, '') + '</ul>';
+        });
+
+        return parsed;
+    }
+
+    sanitizeProductHTML(html) {
+        // Create a temporary div to parse HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+
+        // Allowed tags and attributes for product cards
+        const allowedTags = ['div', 'img', 'h3', 'h4', 'p', 'a'];
+        const allowedAttributes = {
+            'div': ['class', 'style'],
+            'img': ['src', 'alt', 'style'],
+            'h3': ['style'],
+            'h4': ['style'],
+            'p': ['style'],
+            'a': ['href', 'target', 'style']
+        };
+
+        // Function to sanitize an element
+        const sanitizeElement = (element) => {
+            const tagName = element.tagName.toLowerCase();
+            
+            // Remove if not allowed tag
+            if (!allowedTags.includes(tagName)) {
+                element.remove();
+                return;
+            }
+
+            // Remove disallowed attributes
+            const allowedAttrs = allowedAttributes[tagName] || [];
+            const attrs = Array.from(element.attributes);
+            attrs.forEach(attr => {
+                if (!allowedAttrs.includes(attr.name)) {
+                    element.removeAttribute(attr.name);
+                }
+            });
+
+            // Sanitize children
+            Array.from(element.children).forEach(child => {
+                sanitizeElement(child);
+            });
+        };
+
+        // Sanitize all elements
+        Array.from(tempDiv.children).forEach(child => {
+            sanitizeElement(child);
+        });
+
+        return tempDiv.innerHTML;
+    }
+
+    showTyping() {
+        if (!this.messagesContainer) return;
+
+        const typingDiv = document.createElement('div');
+        typingDiv.id = 'woo-ai-typing';
+        typingDiv.className = 'woo-ai-message woo-ai-message-assistant';
+        typingDiv.innerHTML = `
+            <div class="woo-ai-message-content">
+                <div class="woo-ai-typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        `;
+        
+        this.messagesContainer.appendChild(typingDiv);
+        this.scrollDownMessages()
+    }
+
+    hideTyping() {
+        const typing = document.getElementById('woo-ai-typing');
+        if (typing) {
+            typing.remove();
+        }
+    }
+
+    showStreamingTyping() {
+        if (!this.messagesContainer) return;
+
+        const typingDiv = document.createElement('div');
+        typingDiv.id = 'woo-ai-streaming-typing';
+        typingDiv.className = 'woo-ai-message woo-ai-message-assistant';
+        typingDiv.innerHTML = `
+            <div class="woo-ai-message-content">
+                <div class="woo-ai-streaming-indicator">
+                    <span class="woo-ai-streaming-text">AI is thinking</span>
+                    <div class="woo-ai-typing-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.messagesContainer.appendChild(typingDiv);
+        this.scrollDownMessages()
+    }
+
+    hideStreamingTyping() {
+        const typing = document.getElementById('woo-ai-streaming-typing');
+        if (typing) {
+            typing.remove();
+        }
+    }
+
+    createStreamingMessage() {
+        if (!this.messagesContainer) return null;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'woo-ai-message woo-ai-message-assistant woo-ai-streaming-message';
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'woo-ai-message-content woo-ai-streaming-content';
+        
+        const timestamp = document.createElement('div');
+        timestamp.className = 'woo-ai-message-timestamp';
+        timestamp.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        // Add streaming cursor
+        const cursor = document.createElement('span');
+        cursor.className = 'woo-ai-streaming-cursor';
+        cursor.textContent = '▋';
+        messageContent.appendChild(cursor);
+        
+        messageDiv.appendChild(messageContent);
+        messageDiv.appendChild(timestamp);
+        this.messagesContainer.appendChild(messageDiv);
+
+        // Scroll to bottom
+        this.scrollDownMessages()
+
+        return messageDiv;
+    }
+
+    updateStreamingMessage(messageDiv, content) {
+        if (!messageDiv) return;
+
+        const contentDiv = messageDiv.querySelector('.woo-ai-message-content');
+        if (!contentDiv) return;
+
+        // Format the content and add the streaming cursor
+        const formattedContent = this.formatMessageContent(content);
+        const cursor = '<span class="woo-ai-streaming-cursor">▋</span>';
+        contentDiv.innerHTML = formattedContent + cursor;
+
+        // Scroll to bottom
+        if (this.messagesContainer) {
+            this.scrollDownMessages()
+        }
+    }
+
+    finalizeStreamingMessage(messageDiv, finalContent) {
+        if (!messageDiv) return;
+
+        const contentDiv = messageDiv.querySelector('.woo-ai-message-content');
+        if (!contentDiv) return;
+
+        // Remove streaming classes and cursor
+        messageDiv.classList.remove('woo-ai-streaming-message');
+        contentDiv.classList.remove('woo-ai-streaming-content');
+        
+        // Set final content without cursor
+        contentDiv.innerHTML = this.formatMessageContent(finalContent);
+
+        // Add to messages array
+        this.messages.push({ 
+            type: 'assistant', 
+            content: finalContent, 
+            timestamp: new Date() 
+        });
+
+        // Final scroll to bottom
+        if (this.messagesContainer) {
+            this.scrollDownMessages()
+        }
+    }
+
+    async loadChatHistory() {
+        if (!this.sessionId) return;
+
+        try {
+            const response = await fetch(wooAi.wooAiAjax.ajax_url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'woo_ai_history',
+                    nonce: wooAi.wooAiAjax.nonce,
+                    session_id: this.sessionId,
+                }),
+            });
+
+            // Check if response is ok
+            if (!response.ok) {
+                console.warn('Chat history request failed:', response.status, response.statusText);
+                return;
+            }
+
+            // Parse JSON with error handling
+            let data;
+            let responseText;
+            try {
+                responseText = await response.text();
+                if (!responseText || responseText.trim() === '') {
+                    console.warn('Empty response received from chat history request');
+                    return;
+                }
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse chat history response:', parseError);
+                console.log('Raw response:', responseText);
+                return;
+            }
+            
+            // Check if data exists and is valid
+            if (!data) {
+                console.warn('No data received from chat history request');
+                return;
+            }
+            
+            if (data.success && data.messages && data.messages.length > 0) {
+                data.messages.forEach(msg => {
+                    if (msg && msg.type && msg.message) {
+                        this.addMessage(msg.type, msg.message, msg['created_at']);
+                    }
+                });
+            } else if (data.success === false && data.error === 'Conversation not found') {
+                // This is normal for new sessions - no error needed
+                console.log('No previous conversation found for this session');
+            } else if (data.success === false && data.error) {
+                console.warn('Chat history error:', data.error);
+            }
+        } catch (error) {
+            console.error('Failed to load chat history:', error);
+        }
+    }
+
+    generateSessionId() {
+        const stored = localStorage.getItem('woo_ai_session_id');
+        if (stored) {
+            return stored;
+        }
+
+        const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('woo_ai_session_id', sessionId);
+        return sessionId;
+    }
+}
+
+// Initialize chat when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    new WooAIChat();
+});
