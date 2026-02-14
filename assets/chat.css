@@ -1,28 +1,28 @@
 :root {
     /* Woo AI Chat Widget Color Variables */
-    --woo-ai-chat-title-color: #ffffff;
-    --woo-ai-primary-gradient-start: #667eea;
-    --woo-ai-primary-gradient-end: #764ba2;
-    --woo-ai-primary-gradient-coloe: #ffffff;
-    --woo-ai-primary-color: #764ba2;
-    --woo-ai-primary-hover: #6769cb;
-    --woo-ai-secondary-color: #6769cb;
-    --woo-ai-text-primary: #333;
-    --woo-ai-text-secondary: #666;
-    --woo-ai-text-light: #999;
-    --woo-ai-background: #ffffff;
-    --woo-ai-background-light: #f8f9fa;
-    --woo-ai-border-color: #e0e0e0;
-    --woo-ai-border-light: #ddd;
-    --woo-ai-shadow-light: rgba(0, 0, 0, 0.1);
-    --woo-ai-shadow-medium: rgba(0, 0, 0, 0.15);
-    --woo-ai-shadow-strong: rgba(0, 0, 0, 0.2);
-    --woo-ai-success-color: #28a745;
-    --woo-ai-error-color: #dc3545;
-    --woo-ai-warning-color: #ffc107;
+    --ams-chat-title-color: #ffffff;
+    --ams-primary-gradient-start: #667eea;
+    --ams-primary-gradient-end: #764ba2;
+    --ams-primary-gradient-coloe: #ffffff;
+    --ams-primary-color: #764ba2;
+    --ams-primary-hover: #6769cb;
+    --ams-secondary-color: #6769cb;
+    --ams-text-primary: #333;
+    --ams-text-secondary: #666;
+    --ams-text-light: #999;
+    --ams-background: #ffffff;
+    --ams-background-light: #f8f9fa;
+    --ams-border-color: #e0e0e0;
+    --ams-border-light: #ddd;
+    --ams-shadow-light: rgba(0, 0, 0, 0.1);
+    --ams-shadow-medium: rgba(0, 0, 0, 0.15);
+    --ams-shadow-strong: rgba(0, 0, 0, 0.2);
+    --ams-success-color: #28a745;
+    --ams-error-color: #dc3545;
+    --ams-warning-color: #ffc107;
 }
 
-#woo-ai-chat-widget {
+#ams-chat-widget {
     position: fixed;
     bottom: 20px;
     right: 20px;
@@ -30,49 +30,49 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
-#woo-ai-chat-toggle {
+#ams-chat-toggle {
     width: 60px;
     height: 60px;
-    background: linear-gradient(135deg, var(--woo-ai-primary-gradient-start) 0%, var(--woo-ai-primary-gradient-end) 100%);
+    background: linear-gradient(135deg, var(--ams-primary-gradient-start) 0%, var(--ams-primary-gradient-end) 100%);
     border: none;
     border-radius: 50%;
     color: white;
     font-size: 24px;
     cursor: pointer;
-    box-shadow: 0 4px 20px var(--woo-ai-shadow-medium);
+    box-shadow: 0 4px 20px var(--ams-shadow-medium);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-#woo-ai-chat-toggle:hover {
+#ams-chat-toggle:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 25px var(--woo-ai-shadow-strong);
+    box-shadow: 0 6px 25px var(--ams-shadow-strong);
 }
 
-#woo-ai-chat-container {
+#ams-chat-container {
     position: absolute;
     bottom: 70px;
     right: 0;
     width: 350px;
     height: 500px;
-    background: var(--woo-ai-background);
+    background: var(--ams-background);
     border-radius: 12px;
-    box-shadow: 0 10px 40px var(--woo-ai-shadow-medium);
+    box-shadow: 0 10px 40px var(--ams-shadow-medium);
     display: none;
     flex-direction: column;
     overflow: hidden;
 }
 
-.woo-ai-chat-persona {
+.ams-chat-persona {
     display: flex;
     gap: 0.5rem;
     align-items: center;
 }
 
-#woo-ai-chat-header {
-    background: linear-gradient(135deg, var(--woo-ai-primary-gradient-start) 0%, var(--woo-ai-primary-gradient-end) 100%);
+#ams-chat-header {
+    background: linear-gradient(135deg, var(--ams-primary-gradient-start) 0%, var(--ams-primary-gradient-end) 100%);
     color: white;
     padding: 16px;
     display: flex;
@@ -80,21 +80,21 @@
     align-items: center;
 }
 
-.woo-ai-chat-photo {
+.ams-chat-photo {
     width: 40px;
     height: 40px;
     object-fit: cover;
     border-radius: 100%;
 }
 
-#woo-ai-chat-header h4 {
-    color: var(--woo-ai-chat-title-color);
+#ams-chat-header h4 {
+    color: var(--ams-chat-title-color);
     margin: 0;
     font-size: 16px;
     font-weight: 600;
 }
 
-#woo-ai-chat-close {
+#ams-chat-close {
     background: none;
     border: none;
     color: white;
@@ -110,11 +110,11 @@
     transition: background-color 0.2s ease;
 }
 
-#woo-ai-chat-close:hover {
+#ams-chat-close:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-#woo-ai-chat-messages {
+#ams-chat-messages {
     flex: 1;
     padding: 16px;
     overflow-y: auto;
@@ -123,21 +123,21 @@
     gap: 12px;
 }
 
-.woo-ai-message {
+.ams-message {
     display: flex;
     flex-direction: column;
     max-width: 80%;
 }
 
-.woo-ai-message-user {
+.ams-message-user {
     align-self: flex-end;
 }
 
-.woo-ai-message-assistant {
+.ams-message-assistant {
     align-self: flex-start;
 }
 
-.woo-ai-message-content {
+.ams-message-content {
     padding: 10px 14px;
     border-radius: 18px;
     font-size: 14px;
@@ -145,56 +145,56 @@
     word-wrap: break-word;
 }
 
-.woo-ai-message-user .woo-ai-message-content {
-    background: linear-gradient(135deg, var(--woo-ai-primary-gradient-start) 0%, var(--woo-ai-primary-gradient-end) 100%);
+.ams-message-user .ams-message-content {
+    background: linear-gradient(135deg, var(--ams-primary-gradient-start) 0%, var(--ams-primary-gradient-end) 100%);
     color: white;
 }
 
-.woo-ai-message-assistant .woo-ai-message-content {
+.ams-message-assistant .ams-message-content {
     background: #f1f3f5;
-    color: var(--woo-ai-text-primary);
+    color: var(--ams-text-primary);
 }
 
-.woo-ai-message-timestamp {
+.ams-message-timestamp {
     font-size: 11px;
-    color: var(--woo-ai-text-light);
+    color: var(--ams-text-light);
     margin-top: 4px;
     padding: 0 6px;
 }
 
-.woo-ai-message-user .woo-ai-message-timestamp {
+.ams-message-user .ams-message-timestamp {
     text-align: right;
 }
 
-.woo-ai-message-assistant .woo-ai-message-timestamp {
+.ams-message-assistant .ams-message-timestamp {
     text-align: left;
 }
 
-#woo-ai-chat-input-container {
+#ams-chat-input-container {
     padding: 16px;
-    border-top: 1px solid var(--woo-ai-border-color);
+    border-top: 1px solid var(--ams-border-color);
     display: flex;
     gap: 8px;
-    background: var(--woo-ai-background-light);
+    background: var(--ams-background-light);
 }
 
-#woo-ai-chat-input {
+#ams-chat-input {
     flex: 1;
     padding: 10px 12px;
-    border: 1px solid var(--woo-ai-border-light);
+    border: 1px solid var(--ams-border-light);
     border-radius: 20px;
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s ease;
 }
 
-#woo-ai-chat-input:focus {
+#ams-chat-input:focus {
     border-color: #667eea;
 }
 
-#woo-ai-chat-send {
+#ams-chat-send {
     padding: 10px 16px;
-    background: linear-gradient(135deg, var(--woo-ai-primary-gradient-start) 0%, var(--woo-ai-primary-gradient-end) 100%);
+    background: linear-gradient(135deg, var(--ams-primary-gradient-start) 0%, var(--ams-primary-gradient-end) 100%);
     color: white;
     border: none;
     border-radius: 20px;
@@ -203,38 +203,38 @@
     transition: opacity 0.2s ease;
 }
 
-#woo-ai-chat-send:hover {
+#ams-chat-send:hover {
     opacity: 0.9;
 }
 
-#woo-ai-chat-send:disabled {
+#ams-chat-send:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.woo-ai-typing-dots {
+.ams-typing-dots {
     display: inline-flex;
     gap: 4px;
     align-items: center;
 }
 
-.woo-ai-typing-dots span {
+.ams-typing-dots span {
     width: 6px;
     height: 6px;
     background: #999;
     border-radius: 50%;
-    animation: woo-ai-typing 1.4s infinite ease-in-out;
+    animation: ams-typing 1.4s infinite ease-in-out;
 }
 
-.woo-ai-typing-dots span:nth-child(1) {
+.ams-typing-dots span:nth-child(1) {
     animation-delay: -0.32s;
 }
 
-.woo-ai-typing-dots span:nth-child(2) {
+.ams-typing-dots span:nth-child(2) {
     animation-delay: -0.16s;
 }
 
-@keyframes woo-ai-typing {
+@keyframes ams-typing {
     0%, 80%, 100% {
         transform: scale(0.8);
         opacity: 0.5;
@@ -246,48 +246,48 @@
 }
 
 /* Scrollbar styling */
-#woo-ai-chat-messages::-webkit-scrollbar {
+#ams-chat-messages::-webkit-scrollbar {
     width: 6px;
 }
 
-#woo-ai-chat-messages::-webkit-scrollbar-track {
+#ams-chat-messages::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 3px;
 }
 
-#woo-ai-chat-messages::-webkit-scrollbar-thumb {
+#ams-chat-messages::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 3px;
 }
 
-#woo-ai-chat-messages::-webkit-scrollbar-thumb:hover {
+#ams-chat-messages::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
 
 /* Mobile responsive */
 @media (max-width: 768px) {
-    #woo-ai-chat-container {
+    #ams-chat-container {
         width: 300px;
         height: 450px;
         bottom: 70px;
         right: 10px;
     }
     
-    #woo-ai-chat-widget {
+    #ams-chat-widget {
         bottom: 15px;
         right: 15px;
     }
 }
 
 @media (max-width: 480px) {
-    #woo-ai-chat-container {
+    #ams-chat-container {
         width: calc(100vw - 20px);
         height: 400px;
         right: 10px;
         left: 10px;
     }
     
-    #woo-ai-chat-toggle {
+    #ams-chat-toggle {
         width: 50px;
         height: 50px;
         font-size: 20px;
@@ -295,7 +295,7 @@
 }
 
 /* Product Cards Styling */
-#woo-ai-chat-widget .woo-ai-products-grid {
+#ams-chat-widget .ams-products-grid {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -303,22 +303,22 @@
 }
 
 /* Support for AI-generated product cards with inline-block styling */
-#woo-ai-chat-widget .woo-ai-message-content div[style*="display: inline-block"] {
+#ams-chat-widget .ams-message-content div[style*="display: inline-block"] {
     display: block;
     width: 100%;
     margin: 8px 0;
     padding: 8px;
-    border: 1px solid var(--woo-ai-border-color);
+    border: 1px solid var(--ams-border-color);
     border-radius: 6px;
     background: #ffffff;
-    box-shadow: 0 1px 3px var(--woo-ai-shadow-light);
+    box-shadow: 0 1px 3px var(--ams-shadow-light);
 }
 
-#woo-ai-chat-widget .woo-ai-message-content div[style*="display: inline-block"]:hover {
-    box-shadow: 0 2px 6px var(--woo-ai-shadow-medium);
+#ams-chat-widget .ams-message-content div[style*="display: inline-block"]:hover {
+    box-shadow: 0 2px 6px var(--ams-shadow-medium);
 }
 
-#woo-ai-chat-widget .woo-ai-message-content div[style*="display: inline-block"] img {
+#ams-chat-widget .ams-message-content div[style*="display: inline-block"] img {
     width: 60px;
     height: 60px;
     object-fit: cover;
@@ -329,7 +329,7 @@
     margin-bottom: 10px;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content div[style*="display: inline-block"] h3 {
+#ams-chat-widget .ams-message-content div[style*="display: inline-block"] h3 {
     margin: 0 0 4px 0;
     font-size: 14px;
     color: #333;
@@ -337,17 +337,17 @@
     line-height: 1.3;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content div[style*="display: inline-block"] p {
+#ams-chat-widget .ams-message-content div[style*="display: inline-block"] p {
     margin: 0 0 8px 0;
     font-size: 16px;
     font-weight: bold;
-    color: var(--woo-ai-primary-color);
+    color: var(--ams-primary-color);
 }
 
-#woo-ai-chat-widget .woo-ai-message-content div[style*="display: inline-block"] a {
+#ams-chat-widget .ams-message-content div[style*="display: inline-block"] a {
     display: inline-block;
     padding: 4px 8px;
-    background: var(--woo-ai-primary-color);
+    background: var(--ams-primary-color);
     color: white;
     text-decoration: none;
     border-radius: 3px;
@@ -356,251 +356,274 @@
     clear: both;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content div[style*="display: inline-block"] a:hover {
-    background: var(--woo-ai-primary-hover);
+#ams-chat-widget .ams-message-content div[style*="display: inline-block"] a:hover {
+    background: var(--ams-primary-hover);
     text-decoration: none;
 }
 
-#woo-ai-chat-widget .woo-ai-product-card {
+#ams-chat-widget .ams-product-card {
     display: flex;
     align-items: center;
     padding: 12px;
-    border: 1px solid var(--woo-ai-border-color);
+    border: 1px solid var(--ams-border-color);
     border-radius: 8px;
-    background: var(--woo-ai-background);
-    box-shadow: 0 2px 4px var(--woo-ai-shadow-light);
+    background: var(--ams-background);
+    box-shadow: 0 2px 4px var(--ams-shadow-light);
     transition: box-shadow 0.2s ease;
 }
 
-#woo-ai-chat-widget .woo-ai-product-card:hover {
-    box-shadow: 0 2px 6px var(--woo-ai-shadow-medium);
+#ams-chat-widget .ams-product-card:hover {
+    box-shadow: 0 2px 6px var(--ams-shadow-medium);
 }
 
-#woo-ai-chat-widget .woo-ai-product-image {
+#ams-chat-widget .ams-product-image {
     width: 60px;
     height: 60px;
     margin-right: 12px;
     flex-shrink: 0;
 }
 
-#woo-ai-chat-widget .woo-ai-product-image img {
+#ams-chat-widget .ams-product-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     border-radius: 6px;
-    border: 1px solid var(--woo-ai-border-light);
+    border: 1px solid var(--ams-border-light);
 }
 
-#woo-ai-chat-widget .woo-ai-product-info {
+/* Ensure any images injected into message HTML are constrained to the chat width
+   and do not overflow the widget. Also preserve aspect ratio. */
+#ams-chat-widget .ams-message-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 6px;
+    object-fit: contain;
+    margin: 6px 0;
+}
+
+/* If product cards include large images without the product-image wrapper,
+   ensure they are rendered as thumbnails inside cards. */
+#ams-chat-widget .ams-message-content .woo-ai-product-image img,
+#ams-chat-widget .ams-message-content .woo-ai-product-card img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    float: left;
+    margin-right: 10px;
+}
+
+#ams-chat-widget .ams-product-info {
     flex: 1;
 }
 
-#woo-ai-chat-widget .woo-ai-product-info h4 {
+#ams-chat-widget .ams-product-info h4 {
     margin: 0 0 4px 0;
     font-size: 16px;
-    color: var(--woo-ai-text-primary);
+    color: var(--ams-text-primary);
     font-weight: 600;
     line-height: 1.3;
 }
 
-#woo-ai-chat-widget .woo-ai-product-info p {
+#ams-chat-widget .ams-product-info p {
     margin: 0 0 8px 0;
     font-size: 18px;
     font-weight: bold;
-    color: var(--woo-ai-primary-color);
+    color: var(--ams-primary-color);
 }
 
-#woo-ai-chat-widget .woo-ai-product-info a {
+#ams-chat-widget .ams-product-info a {
     display: inline-block;
     padding: 6px 12px;
-    background: linear-gradient(135deg, var(--woo-ai-primary-gradient-start) 0%, var(--woo-ai-primary-gradient-end) 100%);
-    color: var(--woo-ai-primary-gradient-coloe);
+    background: linear-gradient(135deg, var(--ams-primary-gradient-start) 0%, var(--ams-primary-gradient-end) 100%);
+    color: var(--ams-primary-gradient-coloe);
     text-decoration: none;
     border-radius: 4px;
     font-size: 14px;
     transition: background 0.2s ease;
 }
 
-#woo-ai-chat-widget .woo-ai-product-info a:hover {
-    background: var(--woo-ai-primary-hover);
+#ams-chat-widget .ams-product-info a:hover {
+    background: var(--ams-primary-hover);
     text-decoration: none;
 }
 
 /* Markdown Styling */
-#woo-ai-chat-widget .woo-ai-message-content strong {
+#ams-chat-widget .ams-message-content strong {
     font-weight: 600;
-    color: var(--woo-ai-text-primary);
+    color: var(--ams-text-primary);
 }
 
-#woo-ai-chat-widget .woo-ai-message-content em {
+#ams-chat-widget .ams-message-content em {
     font-style: italic;
-    color: var(--woo-ai-text-secondary);
+    color: var(--ams-text-secondary);
 }
 
-#woo-ai-chat-widget .woo-ai-message-content code.woo-ai-inline-code {
+#ams-chat-widget .ams-message-content code.ams-inline-code {
     background: rgba(0, 0, 0, 0.1);
     padding: 2px 6px;
     border-radius: 3px;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 13px;
-    color: var(--woo-ai-text-primary);
+    color: var(--ams-text-primary);
 }
 
-#woo-ai-chat-widget .woo-ai-message-content del {
+#ams-chat-widget .ams-message-content del {
     text-decoration: line-through;
-    color: var(--woo-ai-text-light);
+    color: var(--ams-text-light);
 }
 
-#woo-ai-chat-widget .woo-ai-message-content .woo-ai-header {
+#ams-chat-widget .ams-message-content .ams-header {
     margin: 12px 0 8px 0;
     font-weight: 600;
-    color: var(--woo-ai-text-primary);
+    color: var(--ams-text-primary);
     line-height: 1.3;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content h1.woo-ai-header {
+#ams-chat-widget .ams-message-content h1.ams-header {
     font-size: 18px;
-    border-bottom: 2px solid var(--woo-ai-primary-color);
+    border-bottom: 2px solid var(--ams-primary-color);
     padding-bottom: 4px;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content h2.woo-ai-header {
+#ams-chat-widget .ams-message-content h2.ams-header {
     font-size: 16px;
-    border-bottom: 1px solid var(--woo-ai-border-color);
+    border-bottom: 1px solid var(--ams-border-color);
     padding-bottom: 2px;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content h3.woo-ai-header {
+#ams-chat-widget .ams-message-content h3.ams-header {
     font-size: 15px;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content .woo-ai-list {
+#ams-chat-widget .ams-message-content .ams-list {
     margin: 8px 0;
     padding-left: 0;
     list-style: none;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content .woo-ai-list-item {
+#ams-chat-widget .ams-message-content .ams-list-item {
     margin: 4px 0;
     padding-left: 16px;
     position: relative;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content .woo-ai-list-item::before {
+#ams-chat-widget .ams-message-content .ams-list-item::before {
     content: "•";
-    color: var(--woo-ai-primary-color);
+    color: var(--ams-primary-color);
     position: absolute;
     left: 0;
     font-weight: bold;
 }
 
 /* URL Links styling */
-#woo-ai-chat-widget .woo-ai-message-content .woo-ai-link {
-    color: var(--woo-ai-primary-color);
+#ams-chat-widget .ams-message-content .ams-link {
+    color: var(--ams-primary-color);
     text-decoration: underline;
     transition: color 0.2s ease;
 }
 
-#woo-ai-chat-widget .woo-ai-message-content .woo-ai-link:hover {
-    color: var(--woo-ai-primary-hover);
+#ams-chat-widget .ams-message-content .ams-link:hover {
+    color: var(--ams-primary-hover);
     text-decoration: none;
 }
 
 /* Mobile adjustments for product cards */
 @media (max-width: 480px) {
-    #woo-ai-chat-widget .woo-ai-product-card {
+    #ams-chat-widget .ams-product-card {
         padding: 6px;
     }
     
-    #woo-ai-chat-widget .woo-ai-product-image {
+    #ams-chat-widget .ams-product-image {
         width: 40px;
         height: 40px;
         margin-right: 8px;
     }
     
-    #woo-ai-chat-widget .woo-ai-product-info h4 {
+    #ams-chat-widget .ams-product-info h4 {
         font-size: 13px;
     }
     
-    #woo-ai-chat-widget .woo-ai-product-info p {
+    #ams-chat-widget .ams-product-info p {
         font-size: 14px;
     }
     
-    #woo-ai-chat-widget .woo-ai-product-info a {
+    #ams-chat-widget .ams-product-info a {
         padding: 3px 6px;
         font-size: 11px;
     }
     
     /* Adjust markdown elements for mobile */
-    #woo-ai-chat-widget .woo-ai-message-content h1.woo-ai-header {
+    #ams-chat-widget .ams-message-content h1.ams-header {
         font-size: 16px;
     }
     
-    #woo-ai-chat-widget .woo-ai-message-content h2.woo-ai-header {
+    #ams-chat-widget .ams-message-content h2.ams-header {
         font-size: 15px;
     }
     
-    #woo-ai-chat-widget .woo-ai-message-content h3.woo-ai-header {
+    #ams-chat-widget .ams-message-content h3.ams-header {
         font-size: 14px;
     }
 }
 
 /* Streaming-specific styles */
-#woo-ai-chat-widget .woo-ai-streaming-indicator {
+#ams-chat-widget .ams-streaming-indicator {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--woo-ai-text-secondary);
+    color: var(--ams-text-secondary);
     font-style: italic;
 }
 
-#woo-ai-chat-widget .woo-ai-streaming-text {
+#ams-chat-widget .ams-streaming-text {
     font-size: 14px;
 }
 
-#woo-ai-chat-widget .woo-ai-streaming-message {
+#ams-chat-widget .ams-streaming-message {
     opacity: 0.9;
 }
 
-#woo-ai-chat-widget .woo-ai-streaming-content {
+#ams-chat-widget .ams-streaming-content {
     position: relative;
 }
 
-#woo-ai-chat-widget .woo-ai-streaming-cursor {
-    color: var(--woo-ai-primary-color);
-    animation: woo-ai-blink 1s infinite;
+#ams-chat-widget .ams-streaming-cursor {
+    color: var(--ams-primary-color);
+    animation: ams-blink 1s infinite;
     font-weight: bold;
     margin-left: 2px;
 }
 
-@keyframes woo-ai-blink {
+@keyframes ams-blink {
     0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0; }
 }
 
 /* Enhanced typing dots for streaming */
-#woo-ai-chat-widget .woo-ai-streaming-indicator .woo-ai-typing-dots {
+#ams-chat-widget .ams-streaming-indicator .ams-typing-dots {
     display: flex;
     gap: 2px;
 }
 
-#woo-ai-chat-widget .woo-ai-streaming-indicator .woo-ai-typing-dots span {
+#ams-chat-widget .ams-streaming-indicator .ams-typing-dots span {
     width: 4px;
     height: 4px;
-    background-color: var(--woo-ai-primary-color);
+    background-color: var(--ams-primary-color);
     border-radius: 50%;
-    animation: woo-ai-streaming-dots 1.4s infinite ease-in-out;
+    animation: ams-streaming-dots 1.4s infinite ease-in-out;
 }
 
-#woo-ai-chat-widget .woo-ai-streaming-indicator .woo-ai-typing-dots span:nth-child(1) {
+#ams-chat-widget .ams-streaming-indicator .ams-typing-dots span:nth-child(1) {
     animation-delay: -0.32s;
 }
 
-#woo-ai-chat-widget .woo-ai-streaming-indicator .woo-ai-typing-dots span:nth-child(2) {
+#ams-chat-widget .ams-streaming-indicator .ams-typing-dots span:nth-child(2) {
     animation-delay: -0.16s;
 }
 
-@keyframes woo-ai-streaming-dots {
+@keyframes ams-streaming-dots {
     0%, 80%, 100% {
         transform: scale(0.8);
         opacity: 0.5;

@@ -6,7 +6,7 @@
  *
  * @package Woo_AI
  *
- * @var string   $enabled               Whether the AI assistant is enabled.
+ * @var string   $enabled               Whether the Assist My Shop is enabled.
  * @var string   $api_url               The SaaS backend API URL.
  * @var string   $api_key               The store's API key.
  * @var array    $available_post_types  Available post types for syncing.
@@ -17,22 +17,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 ?>
+
 <form method="post" action="">
+    <?php wp_nonce_field( 'ams_save_settings', 'ams_settings_nonce' ); ?>
 	<input type="hidden" name="tab" value="general">
 	<table class="form-table">
 		<tr>
-			<th scope="row">Enable AI Assistant</th>
+			<th scope="row">Enable Assist My Shop</th>
 			<td>
 				<input type="checkbox" name="enabled" value="1" <?php checked( $enabled, '1' ); ?> />
 				<p class="description">Enable the AI chat widget on your store</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">SaaS API URL</th>
-			<td>
-				<input type="url" name="api_url" value="<?php echo esc_attr( $api_url ); ?>"
-				       class="regular-text" required/>
-				<p class="description">Your SaaS backend API URL</p>
 			</td>
 		</tr>
 		<tr>
@@ -67,9 +61,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 </form>
 
 <h2>Data Sync Status</h2>
-<p>Last sync: <?php echo get_option( 'woo_ai_last_sync', 'Never' ); ?></p>
+<p>Last sync: <?php echo get_option( 'ams_last_sync', 'Never' ); ?></p>
 <?php
-$sync_progress = get_option( 'woo_ai_sync_progress', null );
+$sync_progress = get_option( 'ams_sync_progress', null );
 if ( $sync_progress ) {
 	$percent = $sync_progress['overall_total'] > 0 ?
 		round( ( $sync_progress['overall_processed'] / $sync_progress['overall_total'] ) * 100 ) : 0;
@@ -82,6 +76,13 @@ if ( $sync_progress ) {
 }
 ?>
 <p>
-	<button type="button" class="button" onclick="syncNow()">Sync Now</button>
-	<span id="sync-status"></span>
+	<button type="button" class="button" id="ams-sync-now">Sync Now</button>
+	<span id="sync-status" style="margin-left:10px;"></span>
 </p>
+
+<div id="ams-sync-progress-container" style="display:none; margin-top:10px; max-width:480px;">
+	<div style="background:#eee; border:1px solid #ddd; height:18px; border-radius:3px; overflow:hidden;">
+		<div id="ams-sync-progress" style="height:100%; width:0%; background:linear-gradient(90deg,#6bb9f0,#2b9cf3);"></div>
+	</div>
+	<div id="ams-sync-progress-text" style="font-size:12px; color:#333; margin-top:6px;"></div>
+</div>
