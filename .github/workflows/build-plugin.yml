@@ -37,11 +37,13 @@ jobs:
           zip -r "$ZIP_NAME" "$PLUGIN_DIR" -x "*/node_modules/*" "*/.git/*" "*.DS_Store" || true
           echo "Created $ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_OUTPUT
+          # Export parsed version for later steps
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: assist-my-shop-plugin-zip
+          name: assist-my-shop-plugin-${{ steps.create_zip.outputs.version }}
           path: ${{ steps.create_zip.outputs.ZIP_NAME || 'assist-my-shop-plugin-*.zip' }}
 
       - name: List artifacts
