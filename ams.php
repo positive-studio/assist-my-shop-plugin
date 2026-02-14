@@ -1,14 +1,16 @@
 <?php
 /**
- * Plugin Name: AI Chatbot
- * Description: AI-powered customer support assistant
+ * Plugin Name: Assist My Shop
+ * Plugin URI: https://assistmyshop.com
+ * Description: An AI-powered customer support plugin for WooCommerce and WordPress. Provides a chat widget that integrates with your store's data to assist customers in real-time.
  * Version: 1.1.3
- * Author: NR
+ * Author: Pryvus Inc.
+ * Author URI: https://pryvus.com
  * License: GPL v2 or later
  * Requires at least: 5.0
  * Tested up to: 6.4
  *
- * @package Woo_AI_WP_Plugin
+ * @package AMS_WP
  * @since   1.0.0
  */
 
@@ -17,14 +19,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class AiAssistant
+ * Class AMS_WP_Plugin
  *
  * Main plugin class that handles AI-powered customer support functionality.
  * Manages WooCommerce and WordPress content synchronization with an external
  *
  * @since 1.0.0
  */
-class AiAssistant {
+class AMS_WP_Plugin {
 
 	/**
 	 * Constructor.
@@ -41,12 +43,12 @@ class AiAssistant {
 	}
 
 	private function define_constants() {
-		define( 'WOO_AI_PATH', plugin_dir_path( __FILE__ ) );
-		define( 'WOO_AI_URL', plugin_dir_url( __FILE__ ) );
+		define( 'AMS_PATH', plugin_dir_path( __FILE__ ) );
+		define( 'AMS_URL', plugin_dir_url( __FILE__ ) );
 	}
 
 	private function add_admin_pages(): void {
-		new Woo_Ai_Admin_Settings();
+		new AMS_Admin_Settings();
 	}
 
 	/**
@@ -74,10 +76,10 @@ class AiAssistant {
 		// Check if WooCommerce is active
 		if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 			// WooCommerce hooks for data sync
-			Woo_Ai_Woocommerce_Sync::init();
+			AMS_WC_Sync::init();
 		}
 
-		Woo_Ai_Sync_Handler::init();
+		AMS_Sync_Handler::init();
 	}
 
 	/**
@@ -89,7 +91,7 @@ class AiAssistant {
 	 * @since  1.0.0
 	 */
 	private function integrate_chat(): void {
-		new Woo_Ai_Chat_Manager();
+		new AMS_Chat_Manager();
 	}
 
 	/**
@@ -121,12 +123,12 @@ class AiAssistant {
 	}
 
 	public function enqueue_scripts() {
-		if ( get_option( 'woo_ai_enabled', '1' ) !== '1' ) {
+		if ( get_option( 'ams_enabled', '1' ) !== '1' ) {
 			return;
 		}
 
 		wp_enqueue_script(
-			'woo-ai-chat',
+			'ams-chat',
 			plugin_dir_url( __FILE__ ) . 'assets/chat.js',
 			[ 'jquery' ],
 			'1.1.3',
@@ -134,13 +136,13 @@ class AiAssistant {
 		);
 
 		wp_enqueue_style(
-			'woo-ai-chat',
+			'ams-chat',
 			plugin_dir_url( __FILE__ ) . 'assets/chat.css',
 			[],
 			'1.1.3'
 		);
 
-		wp_localize_script( 'woo-ai-chat', 'wooAi', $this->get_localize_object() );
+		wp_localize_script( 'ams-chat', 'Ams', $this->get_localize_object() );
 
 		// Add custom CSS variables
 		$this->add_custom_styles();
@@ -152,56 +154,56 @@ class AiAssistant {
 
 		$custom_css = "
         :root {
-            --woo-ai-chat-title-color: {$woo_ai_widget_title_color};
-            --woo-ai-primary-gradient-start: {$primary_gradient_start};
-            --woo-ai-primary-gradient-end: {$primary_gradient_end};
-            --woo-ai-primary-gradient-coloe: {$primary_gradient_color};
-            --woo-ai-primary-color: {$primary_color};
-            --woo-ai-primary-hover: {$primary_hover};
-            --woo-ai-secondary-color: {$secondary_color};
-            --woo-ai-text-primary: {$text_primary};
-            --woo-ai-text-secondary: {$text_secondary};
-            --woo-ai-text-light: {$text_light};
-            --woo-ai-background: {$background};
-            --woo-ai-background-light: {$background_light};
-            --woo-ai-border-color: {$border_color};
-            --woo-ai-border-light: {$border_light};
+            --ams-chat-title-color: {$ams_widget_title_color};
+            --ams-primary-gradient-start: {$primary_gradient_start};
+            --ams-primary-gradient-end: {$primary_gradient_end};
+            --ams-primary-gradient-coloe: {$primary_gradient_color};
+            --ams-primary-color: {$primary_color};
+            --ams-primary-hover: {$primary_hover};
+            --ams-secondary-color: {$secondary_color};
+            --ams-text-primary: {$text_primary};
+            --ams-text-secondary: {$text_secondary};
+            --ams-text-light: {$text_light};
+            --ams-background: {$background};
+            --ams-background-light: {$background_light};
+            --ams-border-color: {$border_color};
+            --ams-border-light: {$border_light};
         }";
 
-		wp_add_inline_style( 'woo-ai-chat', $custom_css );
+		wp_add_inline_style( 'ams-chat', $custom_css );
 	}
 
 	public static function get_style_options(): array {
 		return [
-			'woo_ai_widget_title_color' => get_option( 'woo_ai_widget_title_color', '#ffffff' ),
-			'primary_gradient_start'    => get_option( 'woo_ai_primary_gradient_start', '#667eea' ),
-			'primary_gradient_end'      => get_option( 'woo_ai_primary_gradient_end', '#764ba2' ),
-			'primary_gradient_color'    => get_option( 'woo_ai_primary_gradient_color', '#ffffff' ),
-			'primary_color'             => get_option( 'woo_ai_primary_color', '#764ba2' ),
-			'primary_hover'             => get_option( 'woo_ai_primary_hover', '#6769cb' ),
-			'secondary_color'           => get_option( 'woo_ai_secondary_color', '#6769cb' ),
-			'text_primary'              => get_option( 'woo_ai_text_primary', '#333' ),
-			'text_secondary'            => get_option( 'woo_ai_text_secondary', '#666' ),
-			'text_light'                => get_option( 'woo_ai_text_light', '#999' ),
-			'background'                => get_option( 'woo_ai_background', '#ffffff' ),
-			'background_light'          => get_option( 'woo_ai_background_light', '#f8f9fa' ),
-			'border_color'              => get_option( 'woo_ai_border_color', '#e0e0e0' ),
-			'border_light'              => get_option( 'woo_ai_border_light', '#ddd' ),
+			'ams_widget_title_color' 	=> get_option( 'ams_widget_title_color', '#ffffff' ),
+			'primary_gradient_start'    => get_option( 'ams_primary_gradient_start', '#667eea' ),
+			'primary_gradient_end'      => get_option( 'ams_primary_gradient_end', '#764ba2' ),
+			'primary_gradient_color'    => get_option( 'ams_primary_gradient_color', '#ffffff' ),
+			'primary_color'             => get_option( 'ams_primary_color', '#764ba2' ),
+			'primary_hover'             => get_option( 'ams_primary_hover', '#6769cb' ),
+			'secondary_color'           => get_option( 'ams_secondary_color', '#6769cb' ),
+			'text_primary'              => get_option( 'ams_text_primary', '#333' ),
+			'text_secondary'            => get_option( 'ams_text_secondary', '#666' ),
+			'text_light'                => get_option( 'ams_text_light', '#999' ),
+			'background'                => get_option( 'ams_background', '#ffffff' ),
+			'background_light'          => get_option( 'ams_background_light', '#f8f9fa' ),
+			'border_color'              => get_option( 'ams_border_color', '#e0e0e0' ),
+			'border_light'              => get_option( 'ams_border_light', '#ddd' ),
 		];
 	}
 
 	private function get_localize_object(): array {
 		return [
-			'wooAiAjax'     => [
+			'AmsAjax'     => [
 				'ajax_url'          => admin_url( 'admin-ajax.php' ),
-				'nonce'             => wp_create_nonce( 'woo_ai_chat' ),
+				'nonce'             => wp_create_nonce( 'ams_chat' ),
 				'store_url'         => home_url(),
 				'streaming_enabled' => false, // Disabled for OpenAI, only Ollama supports streaming
 			],
-			'assistantName' => get_option( 'woo_ai_assistant_name', '' ),
+			'assistantName' => get_option( 'ams_assistant_name', '' ),
 		];
 	}
 }
 
 // Initialize the plugin
-new AiAssistant();
+new AMS_WP_Plugin();

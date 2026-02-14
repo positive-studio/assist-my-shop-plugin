@@ -5,7 +5,7 @@
  * Handles synchronization of WooCommerce data with external AI service.
  * Listens for WooCommerce events and schedules sync operations.
  *
- * @package Woo_AI_WP_Plugin
+ * @package AMS_WP
  * @since   1.0.0
  */
 
@@ -18,7 +18,7 @@
  *
  * @since 1.0.0
  */
-class Woo_Ai_Woocommerce_Sync {
+class AMS_WC_Sync {
 
 	/**
 	 * Initialize WooCommerce synchronization hooks.
@@ -46,7 +46,7 @@ class Woo_Ai_Woocommerce_Sync {
 	 * @return void
 	 */
 	public static function sync_new_order() {
-		wp_schedule_single_event( time() + 60, 'woo_ai_sync_data' );
+		wp_schedule_single_event( time() + 60, 'ams_sync_data' );
 	}
 
 	/**
@@ -59,6 +59,6 @@ class Woo_Ai_Woocommerce_Sync {
 	 * @return void
 	 */
 	public static function sync_product_update() {
-		wp_schedule_single_event( time() + 60, 'woo_ai_sync_data' );
+		wp_schedule_single_event( time() + 60, 'ams_sync_data' );
 	}
 }

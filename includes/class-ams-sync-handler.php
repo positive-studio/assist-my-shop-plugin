@@ -2,10 +2,10 @@
 
 use JetBrains\PhpStorm\NoReturn;
 
-class Woo_Ai_Sync_Handler {
+class AMS_Sync_Handler {
 
-	private static ?Woo_Ai_Sync_Handler $instance = null;
-	private ?Woo_Ai_Api_Messenger $api_messenger = null;
+	private static ?AMS_Sync_Handler $instance = null;
+	private ?AMS_Api_Messenger $api_messenger = null;
 
 	public function __construct() {
 		$this->define_properties();
@@ -13,7 +13,7 @@ class Woo_Ai_Sync_Handler {
 	}
 
 	private function define_properties(): void {
-		$this->api_messenger = Woo_Ai_Api_Messenger::get();
+		$this->api_messenger = AMS_Api_Messenger::get();
 	}
 
 	private function add_hooks(): void {
@@ -23,9 +23,14 @@ class Woo_Ai_Sync_Handler {
 		add_action( 'wp_trash_post', [ $this, 'sync_post_delete' ] );
 		// Schedule periodic sync
 		add_action( 'wp', [ $this, 'schedule_sync' ] );
-		add_action( 'woo_ai_sync_data', [ $this, 'sync_store_data' ] );
-		add_action( 'woo_ai_background_sync', [ $this, 'background_sync_store_data' ] );
-		add_action( 'wp_ajax_woo_ai_sync_now', [ $this, 'handle_sync_now' ] );
+		add_action( 'ams_sync_data', [ $this, 'sync_store_data' ] );
+		add_action( 'ams_background_sync', [ $this, 'background_sync_store_data' ] );
+		add_action( 'wp_ajax_ams_sync_now', [ $this, 'handle_sync_now' ] );
+		add_action( 'wp_ajax_ams_get_sync_progress', [ $this, 'get_sync_progress' ] );
+	}
+
+	public function validate_api_settings(): bool {
+		return ! empty( $this->api_messenger->check_api_key() );
 	}
 
 	public function sync_post_update( $post_id, $post, $update ): void {
@@ -35,7 +40,7 @@ class Woo_Ai_Sync_Handler {
 		}
 
 		// Get selected post types to sync
-		$selected_post_types = get_option( 'woo_ai_post_types', [ 'product' ] );
+		$selected_post_types = get_option( 'ams_post_types', [ 'product' ] );
 
 		// Only sync if this post type is selected for sync
 		if ( ! in_array( $post->post_type, $selected_post_types ) ) {
@@ -48,7 +53,7 @@ class Woo_Ai_Sync_Handler {
 		}
 
 		// Trigger a partial sync when post is updated
-		wp_schedule_single_event( time() + 60, 'woo_ai_sync_data' );
+		wp_schedule_single_event( time() + 60, 'ams_sync_data' );
 	}
 
 	public function sync_post_delete( $post_id ): void {
@@ -58,7 +63,7 @@ class Woo_Ai_Sync_Handler {
 		}
 
 		// Get selected post types to sync
-		$selected_post_types = get_option( 'woo_ai_post_types', [ 'product' ] );
+		$selected_post_types = get_option( 'ams_post_types', [ 'product' ] );
 
 		// Only sync if this post type is selected for sync
 		if ( ! in_array( $post->post_type, $selected_post_types ) ) {
@@ -74,8 +79,8 @@ class Woo_Ai_Sync_Handler {
 	}
 
 	public function schedule_sync() {
-		if ( ! wp_next_scheduled( 'woo_ai_sync_data' ) ) {
-			//wp_schedule_event(time(), 'hourly', 'woo_ai_sync_data');
+		if ( ! wp_next_scheduled( 'ams_sync_data' ) ) {
+			//wp_schedule_event(time(), 'hourly', 'ams_sync_data');
 		}
 	}
 
@@ -84,14 +89,14 @@ class Woo_Ai_Sync_Handler {
 	 */
 	public function schedule_immediate_sync() {
 		// Clear any existing sync jobs first
-		wp_clear_scheduled_hook( 'woo_ai_background_sync' );
+		wp_clear_scheduled_hook( 'ams_background_sync' );
 
 		// Schedule immediate sync
-		wp_schedule_single_event( time() + 5, 'woo_ai_background_sync' );
+		wp_schedule_single_event( time() + 5, 'ams_background_sync' );
 
 		// Register the background sync action if not already registered
-		if ( ! has_action( 'woo_ai_background_sync', [ $this, 'background_sync_store_data' ] ) ) {
-			add_action( 'woo_ai_background_sync', [ $this, 'background_sync_store_data' ] );
+		if ( ! has_action( 'ams_background_sync', [ $this, 'background_sync_store_data' ] ) ) {
+			add_action( 'ams_background_sync', [ $this, 'background_sync_store_data' ] );
 		}
 	}
 
@@ -109,7 +114,7 @@ class Woo_Ai_Sync_Handler {
 		];
 
 		// Get selected post types
-		$selected_post_types = get_option( 'woo_ai_post_types', [ 'product' ] );
+		$selected_post_types = get_option( 'ams_post_types', [ 'product' ] );
 		$all_content_data    = [];
 
 		foreach ( $selected_post_types as $post_type ) {
@@ -141,7 +146,7 @@ class Woo_Ai_Sync_Handler {
 		error_log( print_r( $response, true ) );
 
 		if ( $response && $response['success'] ) {
-			update_option( 'woo_ai_last_sync', current_time( 'mysql' ) );
+			update_option( 'ams_last_sync', current_time( 'mysql' ) );
 		}
 
 		return $response;
@@ -308,11 +313,11 @@ class Woo_Ai_Sync_Handler {
 	 * Complete sync and cleanup
 	 */
 	private function complete_sync(): void {
-		delete_option( 'woo_ai_sync_progress' );
-		update_option( 'woo_ai_last_sync', current_time( 'mysql' ) );
+		delete_option( 'ams_sync_progress' );
+		update_option( 'ams_last_sync', current_time( 'mysql' ) );
 
 		// Log completion
-		error_log( 'WooAI: Background sync completed successfully' );
+		error_log( 'Ams: Background sync completed successfully' );
 	}
 
 	/**
@@ -324,7 +329,7 @@ class Woo_Ai_Sync_Handler {
 		}
 
 		// Get or initialize sync progress
-		$sync_progress = get_option( 'woo_ai_sync_progress', [
+		$sync_progress = get_option( 'ams_sync_progress', [
 			'step'              => 'start',
 			'current_post_type' => null,
 			'post_types_queue'  => [],
@@ -376,7 +381,7 @@ class Woo_Ai_Sync_Handler {
 	 * Initialize content sync for all selected post types
 	 */
 	private function init_content_sync( &$sync_progress ): void {
-		$selected_post_types                = get_option( 'woo_ai_post_types', [ 'product' ] );
+		$selected_post_types                = get_option( 'ams_post_types', [ 'product' ] );
 		$sync_progress['post_types_queue']  = $selected_post_types;
 		$sync_progress['step']              = 'content';
 		$sync_progress['overall_processed'] = 0;
@@ -399,10 +404,10 @@ class Woo_Ai_Sync_Handler {
 			$this->init_current_post_type_sync( $sync_progress );
 		}
 
-		update_option( 'woo_ai_sync_progress', $sync_progress );
+		update_option( 'ams_sync_progress', $sync_progress );
 
 		// Schedule next batch
-		wp_schedule_single_event( time() + 2, 'woo_ai_background_sync' );
+		wp_schedule_single_event( time() + 2, 'ams_background_sync' );
 	}
 
 	/**
@@ -449,11 +454,11 @@ class Woo_Ai_Sync_Handler {
 		// Update progress
 		$sync_progress['current_processed'] += count( $content_data );
 		$sync_progress['overall_processed'] += count( $content_data );
-		update_option( 'woo_ai_sync_progress', $sync_progress );
+		update_option( 'ams_sync_progress', $sync_progress );
 
 		// Schedule next batch if there are more items for current post type
 		if ( $sync_progress['current_processed'] < $sync_progress['current_total'] ) {
-			wp_schedule_single_event( time() + 3, 'woo_ai_background_sync' ); // 3 second delay between batches
+			wp_schedule_single_event( time() + 3, 'ams_background_sync' ); // 3 second delay between batches
 		} else {
 			// Move to next post type
 			$this->move_to_next_post_type( $sync_progress );
@@ -468,13 +473,13 @@ class Woo_Ai_Sync_Handler {
 			// Move to next post type
 			$sync_progress['current_post_type'] = array_shift( $sync_progress['post_types_queue'] );
 			$this->init_current_post_type_sync( $sync_progress );
-			update_option( 'woo_ai_sync_progress', $sync_progress );
-			wp_schedule_single_event( time() + 2, 'woo_ai_background_sync' );
+			update_option( 'ams_sync_progress', $sync_progress );
+			wp_schedule_single_event( time() + 2, 'ams_background_sync' );
 		} else {
 			// All post types done, move to orders
 			$sync_progress['step'] = 'orders';
-			update_option( 'woo_ai_sync_progress', $sync_progress );
-			wp_schedule_single_event( time() + 2, 'woo_ai_background_sync' );
+			update_option( 'ams_sync_progress', $sync_progress );
+			wp_schedule_single_event( time() + 2, 'ams_background_sync' );
 		}
 	}
 
@@ -519,10 +524,33 @@ class Woo_Ai_Sync_Handler {
 		return $posts_data;
 	}
 
+	private function validate_connection(): array {
+		if ( empty( $this->api_messenger->check_api_key() ) ) {
+			return [
+				'success' => false,
+				'message' => 'API key is missing or invalid',
+			];
+		}
+		$response = $this->api_messenger->send_to_saas_api('/store/validate', [
+			'store_url' => home_url(),
+		] );
+		if ( $response == null ) {
+			return [
+				'success' => false,
+				'message' => 'No response from API',
+			];
+		}
+		return [
+			'success' => $response['success'] ?? false,
+			'message' => $response['error'] ?? 'Unknown error',
+		];
+	}
+
+
 	#[NoReturn]
 	public function handle_sync_now(): void {
 		// Verify nonce
-		if ( ! wp_verify_nonce( $_POST['nonce'], 'woo_ai_sync' ) ) {
+		if ( ! wp_verify_nonce( $_POST['nonce'], 'ams_sync' ) ) {
 			wp_die( json_encode( [ 'success' => false, 'message' => 'Invalid nonce' ] ) );
 		}
 
@@ -531,18 +559,36 @@ class Woo_Ai_Sync_Handler {
 			wp_die( json_encode( [ 'success' => false, 'message' => 'Insufficient permissions' ] ) );
 		}
 
-		// Schedule background sync
-		// Woo_Ai_Sync_handler::get()->schedule_immediate_sync();
-		$this->sync_store_data();
+		$result = $this->validate_connection();
+		if ( empty( $result ) || ! $result['success'] ) {
+			wp_die( json_encode( [ 'success' => false, 'message' => 'Connection validation failed: ' . ( $result['message'] ?? 'Unknown' ) ] ) );
+		}
+
+		// Schedule the background sync properly
+		$this->schedule_immediate_sync();
 
 		wp_die( json_encode( [ 'success' => true, 'message' => 'Background sync scheduled successfully' ] ) );
 	}
 
-	public static function init(): Woo_Ai_Sync_Handler {
+	/**
+	 * Return current sync progress for polling in the admin UI
+	 */
+	public function get_sync_progress(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( json_encode( [ 'success' => false, 'message' => 'Insufficient permissions' ] ) );
+		}
+
+		$sync_progress = get_option( 'ams_sync_progress', null );
+		$last_sync = get_option( 'ams_last_sync', 'Never' );
+
+		wp_die( json_encode( [ 'success' => true, 'progress' => $sync_progress, 'last_sync' => $last_sync ] ) );
+	}
+
+	public static function init(): AMS_Sync_Handler {
 		return self::get();
 	}
 
-	public static function get(): Woo_Ai_Sync_Handler {
+	public static function get(): AMS_Sync_Handler {
 		if ( is_null( self::$instance ) && ! ( self::$instance instanceof self ) ) {
 			self::$instance = new self();
 		}

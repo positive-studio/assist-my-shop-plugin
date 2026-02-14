@@ -1,9 +1,9 @@
-class WooAIChat {
+class AmsChat {
     constructor() {
         this.isOpen = false;
         this.sessionId = this.generateSessionId();
         this.messages = [];
-        this.messagesContainer = document.getElementById('woo-ai-chat-messages');
+        this.messagesContainer = document.getElementById('ams-chat-messages');
         this.init();
     }
 
@@ -16,23 +16,23 @@ class WooAIChat {
 
     setGreetingMessage() {
         this.greetingMessage = 'Hello! How can I help you today?';
-        if (typeof wooAi?.assistantName !== "undefined" && wooAi?.assistantName) {
-            this.greetingMessage = `Hello! My name is ${wooAi.assistantName}! How can I help you today?`
+        if (typeof Ams?.assistantName !== "undefined" && Ams?.assistantName) {
+            this.greetingMessage = `Hello! My name is ${Ams.assistantName}! How can I help you today?`
         }
     }
 
     createChatWidget() {
-        const widget = document.getElementById('woo-ai-chat-widget');
+        const widget = document.getElementById('ams-chat-widget');
         if (widget) {
             widget.style.display = 'block';
         }
     }
 
     bindEvents() {
-        const toggle = document.getElementById('woo-ai-chat-toggle');
-        const close = document.getElementById('woo-ai-chat-close');
-        const input = document.getElementById('woo-ai-chat-input');
-        const send = document.getElementById('woo-ai-chat-send');
+        const toggle = document.getElementById('ams-chat-toggle');
+        const close = document.getElementById('ams-chat-close');
+        const input = document.getElementById('ams-chat-input');
+        const send = document.getElementById('ams-chat-send');
 
         if (toggle) {
             toggle.addEventListener('click', () => this.toggleChat());
@@ -56,7 +56,7 @@ class WooAIChat {
     }
 
     toggleChat() {
-        const container = document.getElementById('woo-ai-chat-container');
+        const container = document.getElementById('ams-chat-container');
         if (container) {
             this.isOpen = !this.isOpen;
             container.style.display = this.isOpen ? 'flex' : 'none';
@@ -78,7 +78,7 @@ class WooAIChat {
     }
 
     closeChat() {
-        const container = document.getElementById('woo-ai-chat-container');
+        const container = document.getElementById('ams-chat-container');
         if (container) {
             this.isOpen = false;
             container.style.display = 'none';
@@ -86,7 +86,7 @@ class WooAIChat {
     }
 
     async sendMessage() {
-        const input = document.getElementById('woo-ai-chat-input');
+        const input = document.getElementById('ams-chat-input');
         const message = input.value.trim();
 
         if (!message) return;
@@ -105,7 +105,7 @@ class WooAIChat {
 
     isStreamingSupported() {
         // Check if EventSource is supported and if we have a streaming endpoint
-        return typeof EventSource !== 'undefined' && wooAi.wooAiAjax.streaming_enabled;
+        return typeof EventSource !== 'undefined' && Ams.AmsAjax.streaming_enabled;
     }
 
     async sendMessageStreaming(message) {
@@ -113,12 +113,12 @@ class WooAIChat {
         this.showStreamingTyping();
 
         try {
-            console.log('Starting streaming request to:', wooAi.wooAiAjax.ajax_url);
+            console.log('Starting streaming request to:', Ams.AmsAjax.ajax_url);
             
             // Use WordPress AJAX endpoint for streaming to avoid CORS issues
             const params = new URLSearchParams({
-                action: 'woo_ai_chat_stream',
-                nonce: wooAi.wooAiAjax.nonce,
+                action: 'ams_chat_stream',
+                nonce: Ams.AmsAjax.nonce,
                 message: message,
                 session_id: this.sessionId,
             });
@@ -126,7 +126,7 @@ class WooAIChat {
             console.log('Streaming params:', params.toString());
 
             // Make streaming request through WordPress AJAX
-            const response = await fetch(wooAi.wooAiAjax.ajax_url, {
+            const response = await fetch(Ams.AmsAjax.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -203,14 +203,14 @@ class WooAIChat {
         this.showTyping();
 
         try {
-            const response = await fetch(wooAi.wooAiAjax.ajax_url, {
+            const response = await fetch(Ams.AmsAjax.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
-                    action: 'woo_ai_chat',
-                    nonce: wooAi.wooAiAjax.nonce,
+                    action: 'ams_chat',
+                    nonce: Ams.AmsAjax.nonce,
                     message: message,
                     session_id: this.sessionId,
                 }),
@@ -237,15 +237,15 @@ class WooAIChat {
         if (!this.messagesContainer) return;
 
         const messageDiv = document.createElement('div');
-        messageDiv.className = `woo-ai-message woo-ai-message-${type}`;
+        messageDiv.className = `ams-message ams-message-${type}`;
         
         const messageContent = document.createElement('div');
-        messageContent.className = 'woo-ai-message-content';
+        messageContent.className = 'ams-message-content';
         messageContent.innerHTML = this.formatMessageContent(content);
 
         const messageDate = messageTime ? new Date(messageTime) : new Date();
         const timestamp = document.createElement('div');
-        timestamp.className = 'woo-ai-message-timestamp';
+        timestamp.className = 'ams-message-timestamp';
         timestamp.textContent = messageDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
         messageDiv.appendChild(messageContent);
@@ -260,12 +260,12 @@ class WooAIChat {
 
     formatMessageContent(content) {
         // Check if content contains HTML product cards mixed with text
-        if (content.includes('<div class="woo-ai-products-grid"') || 
-            content.includes('<div class="woo-ai-product-card"') ||
+        if (content.includes('<div class="ams-products-grid"') || 
+            content.includes('<div class="ams-product-card"') ||
             (content.includes('<img src=') && content.includes('View Product'))) {
             
             // Split the content into text part and HTML part
-            const htmlMatch = content.match(/(<div class="woo-ai-products-grid">.*?<\/div>)$/s);
+            const htmlMatch = content.match(/(<div class="ams-products-grid">.*?<\/div>)$/s);
             if (htmlMatch) {
                 const htmlPart = htmlMatch[1];
                 const textPart = content.replace(htmlMatch[0], '').trim();
@@ -305,7 +305,7 @@ class WooAIChat {
     convertMarkdownLinksToHtml(text) {
         return text.replace(
             /\[([^\]]+)\]\(([^)]+)\)/g,
-            '<a target="_blank" rel="noopener noreferrer" class="woo-ai-link" href="$2">$1</a>'
+            '<a target="_blank" rel="noopener noreferrer" class="ams-link" href="$2">$1</a>'
         );
     }
 
@@ -337,31 +337,31 @@ class WooAIChat {
         parsed = parsed.replace(/&#95;([^&#95;\s][^&#95;]*?[^&#95;\s]?)&#95;/g, '<em>$1</em>');
 
         // Inline code: `code`
-        parsed = parsed.replace(/`([^`]+?)`/g, '<code class="woo-ai-inline-code">$1</code>');
-        parsed = parsed.replace(/&#96;([^&#96;]+?)&#96;/g, '<code class="woo-ai-inline-code">$1</code>');
+        parsed = parsed.replace(/`([^`]+?)`/g, '<code class="ams-inline-code">$1</code>');
+        parsed = parsed.replace(/&#96;([^&#96;]+?)&#96;/g, '<code class="ams-inline-code">$1</code>');
 
         // Strikethrough: ~~text~~
         parsed = parsed.replace(/~~(.*?)~~/g, '<del>$1</del>');
         parsed = parsed.replace(/&#126;&#126;(.*?)&#126;&#126;/g, '<del>$1</del>');
 
         // Headers: # Header (only at start of line or after <br>)
-        parsed = parsed.replace(/(^|<br>)### (.*?)(<br>|$)/g, '$1<h3 class="woo-ai-header">$2</h3>$3');
-        parsed = parsed.replace(/(^|<br>)## (.*?)(<br>|$)/g, '$1<h2 class="woo-ai-header">$2</h2>$3');
-        parsed = parsed.replace(/(^|<br>)# (.*?)(<br>|$)/g, '$1<h1 class="woo-ai-header">$2</h1>$3');
+        parsed = parsed.replace(/(^|<br>)### (.*?)(<br>|$)/g, '$1<h3 class="ams-header">$2</h3>$3');
+        parsed = parsed.replace(/(^|<br>)## (.*?)(<br>|$)/g, '$1<h2 class="ams-header">$2</h2>$3');
+        parsed = parsed.replace(/(^|<br>)# (.*?)(<br>|$)/g, '$1<h1 class="ams-header">$2</h1>$3');
         
         // HTML entity versions
-        parsed = parsed.replace(/(^|<br>)&#35;&#35;&#35; (.*?)(<br>|$)/g, '$1<h3 class="woo-ai-header">$2</h3>$3');
-        parsed = parsed.replace(/(^|<br>)&#35;&#35; (.*?)(<br>|$)/g, '$1<h2 class="woo-ai-header">$2</h2>$3');
-        parsed = parsed.replace(/(^|<br>)&#35; (.*?)(<br>|$)/g, '$1<h1 class="woo-ai-header">$2</h1>$3');
+        parsed = parsed.replace(/(^|<br>)&#35;&#35;&#35; (.*?)(<br>|$)/g, '$1<h3 class="ams-header">$2</h3>$3');
+        parsed = parsed.replace(/(^|<br>)&#35;&#35; (.*?)(<br>|$)/g, '$1<h2 class="ams-header">$2</h2>$3');
+        parsed = parsed.replace(/(^|<br>)&#35; (.*?)(<br>|$)/g, '$1<h1 class="ams-header">$2</h1>$3');
 
         // Unordered lists: - item or * item (at start of line or after <br>)
-        parsed = parsed.replace(/(^|<br>)[-*] (.*?)(<br>|$)/g, '$1<li class="woo-ai-list-item">$2</li>$3');
-        parsed = parsed.replace(/(^|<br>)&#45; (.*?)(<br>|$)/g, '$1<li class="woo-ai-list-item">$2</li>$3');
-        parsed = parsed.replace(/(^|<br>)&#42; (.*?)(<br>|$)/g, '$1<li class="woo-ai-list-item">$2</li>$3');
+        parsed = parsed.replace(/(^|<br>)[-*] (.*?)(<br>|$)/g, '$1<li class="ams-list-item">$2</li>$3');
+        parsed = parsed.replace(/(^|<br>)&#45; (.*?)(<br>|$)/g, '$1<li class="ams-list-item">$2</li>$3');
+        parsed = parsed.replace(/(^|<br>)&#42; (.*?)(<br>|$)/g, '$1<li class="ams-list-item">$2</li>$3');
         
         // Wrap consecutive list items in <ul>
-        parsed = parsed.replace(/(<li class="woo-ai-list-item">.*?<\/li>(?:<br>)?)+/g, (match) => {
-            return '<ul class="woo-ai-list">' + match.replace(/<br>/g, '') + '</ul>';
+        parsed = parsed.replace(/(<li class="ams-list-item">.*?<\/li>(?:<br>)?)+/g, (match) => {
+            return '<ul class="ams-list">' + match.replace(/<br>/g, '') + '</ul>';
         });
 
         return parsed;
@@ -420,11 +420,11 @@ class WooAIChat {
         if (!this.messagesContainer) return;
 
         const typingDiv = document.createElement('div');
-        typingDiv.id = 'woo-ai-typing';
-        typingDiv.className = 'woo-ai-message woo-ai-message-assistant';
+        typingDiv.id = 'ams-typing';
+        typingDiv.className = 'ams-message ams-message-assistant';
         typingDiv.innerHTML = `
-            <div class="woo-ai-message-content">
-                <div class="woo-ai-typing-dots">
+            <div class="ams-message-content">
+                <div class="ams-typing-dots">
                     <span></span><span></span><span></span>
                 </div>
             </div>
@@ -435,7 +435,7 @@ class WooAIChat {
     }
 
     hideTyping() {
-        const typing = document.getElementById('woo-ai-typing');
+        const typing = document.getElementById('ams-typing');
         if (typing) {
             typing.remove();
         }
@@ -445,13 +445,13 @@ class WooAIChat {
         if (!this.messagesContainer) return;
 
         const typingDiv = document.createElement('div');
-        typingDiv.id = 'woo-ai-streaming-typing';
-        typingDiv.className = 'woo-ai-message woo-ai-message-assistant';
+        typingDiv.id = 'ams-streaming-typing';
+        typingDiv.className = 'ams-message ams-message-assistant';
         typingDiv.innerHTML = `
-            <div class="woo-ai-message-content">
-                <div class="woo-ai-streaming-indicator">
-                    <span class="woo-ai-streaming-text">AI is thinking</span>
-                    <div class="woo-ai-typing-dots">
+            <div class="ams-message-content">
+                <div class="ams-streaming-indicator">
+                    <span class="ams-streaming-text">AI is thinking</span>
+                    <div class="ams-typing-dots">
                         <span></span><span></span><span></span>
                     </div>
                 </div>
@@ -463,7 +463,7 @@ class WooAIChat {
     }
 
     hideStreamingTyping() {
-        const typing = document.getElementById('woo-ai-streaming-typing');
+        const typing = document.getElementById('ams-streaming-typing');
         if (typing) {
             typing.remove();
         }
@@ -473,18 +473,18 @@ class WooAIChat {
         if (!this.messagesContainer) return null;
 
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'woo-ai-message woo-ai-message-assistant woo-ai-streaming-message';
+        messageDiv.className = 'ams-message ams-message-assistant ams-streaming-message';
         
         const messageContent = document.createElement('div');
-        messageContent.className = 'woo-ai-message-content woo-ai-streaming-content';
+        messageContent.className = 'ams-message-content ams-streaming-content';
         
         const timestamp = document.createElement('div');
-        timestamp.className = 'woo-ai-message-timestamp';
+        timestamp.className = 'ams-message-timestamp';
         timestamp.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         
         // Add streaming cursor
         const cursor = document.createElement('span');
-        cursor.className = 'woo-ai-streaming-cursor';
+        cursor.className = 'ams-streaming-cursor';
         cursor.textContent = '▋';
         messageContent.appendChild(cursor);
         
@@ -501,12 +501,12 @@ class WooAIChat {
     updateStreamingMessage(messageDiv, content) {
         if (!messageDiv) return;
 
-        const contentDiv = messageDiv.querySelector('.woo-ai-message-content');
+        const contentDiv = messageDiv.querySelector('.ams-message-content');
         if (!contentDiv) return;
 
         // Format the content and add the streaming cursor
         const formattedContent = this.formatMessageContent(content);
-        const cursor = '<span class="woo-ai-streaming-cursor">▋</span>';
+        const cursor = '<span class="ams-streaming-cursor">▋</span>';
         contentDiv.innerHTML = formattedContent + cursor;
 
         // Scroll to bottom
@@ -518,12 +518,12 @@ class WooAIChat {
     finalizeStreamingMessage(messageDiv, finalContent) {
         if (!messageDiv) return;
 
-        const contentDiv = messageDiv.querySelector('.woo-ai-message-content');
+        const contentDiv = messageDiv.querySelector('.ams-message-content');
         if (!contentDiv) return;
 
         // Remove streaming classes and cursor
-        messageDiv.classList.remove('woo-ai-streaming-message');
-        contentDiv.classList.remove('woo-ai-streaming-content');
+        messageDiv.classList.remove('ams-streaming-message');
+        contentDiv.classList.remove('ams-streaming-content');
         
         // Set final content without cursor
         contentDiv.innerHTML = this.formatMessageContent(finalContent);
@@ -545,14 +545,14 @@ class WooAIChat {
         if (!this.sessionId) return;
 
         try {
-            const response = await fetch(wooAi.wooAiAjax.ajax_url, {
+            const response = await fetch(Ams.AmsAjax.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
-                    action: 'woo_ai_history',
-                    nonce: wooAi.wooAiAjax.nonce,
+                    action: 'ams_history',
+                    nonce: Ams.AmsAjax.nonce,
                     session_id: this.sessionId,
                 }),
             });
@@ -603,18 +603,18 @@ class WooAIChat {
     }
 
     generateSessionId() {
-        const stored = localStorage.getItem('woo_ai_session_id');
+        const stored = localStorage.getItem('ams_session_id');
         if (stored) {
             return stored;
         }
 
         const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('woo_ai_session_id', sessionId);
+        localStorage.setItem('ams_session_id', sessionId);
         return sessionId;
     }
 }
 
 // Initialize chat when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
-    new WooAIChat();
+    new AmsChat();
 });

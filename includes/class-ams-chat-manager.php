@@ -1,47 +1,47 @@
 <?php
 
-class Woo_Ai_Chat_Manager {
-    private ?Woo_Ai_Api_Messenger $api_messenger;
+class AMS_Chat_Manager {
+    private ?AMS_Api_Messenger $api_messenger;
     
 	public function __construct() {
-        $this->api_messenger = Woo_Ai_Api_Messenger::get();
+        $this->api_messenger = AMS_Api_Messenger::get();
         
 		add_action( 'wp_footer', [ $this, 'add_chat_widget' ] );
-		add_action( 'wp_ajax_woo_ai_chat', [ $this, 'handle_chat_request' ] );
-		add_action( 'wp_ajax_nopriv_woo_ai_chat', [ $this, 'handle_chat_request' ] );
-		add_action( 'wp_ajax_woo_ai_chat_stream', [ $this, 'handle_chat_stream' ] );
-		add_action( 'wp_ajax_nopriv_woo_ai_chat_stream', [ $this, 'handle_chat_stream' ] );
-		add_action( 'wp_ajax_woo_ai_history', [ $this, 'handle_chat_history' ] );
-		add_action( 'wp_ajax_nopriv_woo_ai_history', [ $this, 'handle_chat_history' ] );
+		add_action( 'wp_ajax_ams_chat', [ $this, 'handle_chat_request' ] );
+		add_action( 'wp_ajax_nopriv_ams_chat', [ $this, 'handle_chat_request' ] );
+		add_action( 'wp_ajax_ams_chat_stream', [ $this, 'handle_chat_stream' ] );
+		add_action( 'wp_ajax_nopriv_ams_chat_stream', [ $this, 'handle_chat_stream' ] );
+		add_action( 'wp_ajax_ams_history', [ $this, 'handle_chat_history' ] );
+		add_action( 'wp_ajax_nopriv_ams_history', [ $this, 'handle_chat_history' ] );
 	}
 
 	public function add_chat_widget() {
-		if ( get_option( 'woo_ai_enabled', '1' ) !== '1' ) {
+		if ( get_option( 'ams_enabled', '1' ) !== '1' ) {
 			return;
 		}
 
 		?>
-		<div id="woo-ai-chat-widget" style="display: none;">
-			<div id="woo-ai-chat-toggle">
+		<div id="ams-chat-widget" style="display: none;">
+			<div id="ams-chat-toggle">
 				<span>💬</span>
 			</div>
-			<div id="woo-ai-chat-container">
-                <div id="woo-ai-chat-header">
-                    <div class="woo-ai-chat-persona">
+			<div id="ams-chat-container">
+                <div id="ams-chat-header">
+                    <div class="ams-chat-persona">
                         <?php
-                        $media_id  = get_option( 'woo_ai_photo_icon' );
+                        $media_id  = get_option( 'ams_photo_icon' );
                         $media_url = $media_id ? wp_get_attachment_image_src( $media_id, 'thumbnail' ) : '';
                         if ( $media_url && ! empty( $media_url[0] ) ): ?>
-                            <img src="<?php echo esc_url( $media_url[0] ); ?>" class="woo-ai-chat-photo">
+                            <img src="<?php echo esc_url( $media_url[0] ); ?>" class="ams-chat-photo">
                         <?php endif; ?>
-                        <h4 class="woo-ai-chat-title"><?php echo get_option( 'woo_ai_chat_title', 'AI Assitant' ); ?></h4>
+                        <h4 class="ams-chat-title"><?php echo get_option( 'ams_chat_title', 'AI Assitant' ); ?></h4>
                     </div>
-                    <button id="woo-ai-chat-close">&times;</button>
+                    <button id="ams-chat-close">&times;</button>
                 </div>
-				<div id="woo-ai-chat-messages"></div>
-				<div id="woo-ai-chat-input-container">
-					<input type="text" id="woo-ai-chat-input" placeholder="Ask me..."/>
-					<button id="woo-ai-chat-send">Send</button>
+				<div id="ams-chat-messages"></div>
+				<div id="ams-chat-input-container">
+					<input type="text" id="ams-chat-input" placeholder="Ask me..."/>
+					<button id="ams-chat-send">Send</button>
 				</div>
 			</div>
 		</div>
@@ -49,7 +49,7 @@ class Woo_Ai_Chat_Manager {
 	}
 
 	public function handle_chat_request() {
-		check_ajax_referer( 'woo_ai_chat', 'nonce' );
+		check_ajax_referer( 'ams_chat', 'nonce' );
 
 		$message    = sanitize_text_field( $_POST['message'] );
 		$session_id = sanitize_text_field( $_POST['session_id'] );
@@ -71,7 +71,7 @@ class Woo_Ai_Chat_Manager {
 	}
 
 	public function handle_chat_stream() {
-		check_ajax_referer( 'woo_ai_chat', 'nonce' );
+		check_ajax_referer( 'ams_chat', 'nonce' );
 
 		$message    = sanitize_text_field( $_POST['message'] );
 		$session_id = sanitize_text_field( $_POST['session_id'] );
@@ -106,7 +106,7 @@ class Woo_Ai_Chat_Manager {
 	}
 
 	public function handle_chat_history() {
-		check_ajax_referer( 'woo_ai_chat', 'nonce' );
+		check_ajax_referer( 'ams_chat', 'nonce' );
 
 		$session_id = sanitize_text_field( $_POST['session_id'] );
 

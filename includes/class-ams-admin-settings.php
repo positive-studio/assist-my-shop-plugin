@@ -1,0 +1,283 @@
+<?php
+
+class AMS_Admin_Settings {
+
+    private array $global_styling_options = [];
+
+	public function __construct() {
+        $this->set_global_styling_options();
+
+		add_action( 'admin_menu', [ $this, 'add_admin_menu' ] );
+        add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+	}
+
+    public function enqueue_admin_assets(): void {
+        // Enqueue the WordPress media script
+        wp_enqueue_media();
+        wp_enqueue_script(
+            'my-custom-media-upload',
+            AMS_URL . 'assets/admin/js/media-uploader.js',
+            array( 'jquery' ),
+            '1.0',
+            true
+        );
+    }
+
+	/**
+	 * Register admin menu page.
+	 *
+	 * Adds the Assist My Shop settings page under the WordPress Settings menu.
+	 *
+	 * @since  1.0.0
+	 * @return void
+	 */
+	public function add_admin_menu(): void {
+		add_submenu_page(
+			'options-general.php',
+			'Assist My Shop Settings',
+			'Assist My Shop',
+			'manage_options',
+			'ai-assistant',
+			[ $this, 'admin_page' ]
+		);
+	}
+
+	/**
+	 * Render the admin settings page.
+	 *
+	 * Handles form submissions for general settings and styling options,
+	 * displays tabbed interface for configuration, and shows sync status.
+	 *
+	 * @since  1.0.0
+	 * @return void
+	 */
+	public function admin_page(): void {
+		// Handle form submissions
+		if ( isset( $_POST['submit'] ) ) {
+            $this->handle_submit( $_POST );
+		}
+
+		// Get current tab
+		$current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'general';
+
+		// Get current values
+		$api_key             = get_option( 'ams_api_key', '' );
+		$enabled             = get_option( 'ams_enabled', '1' );
+		$selected_post_types = get_option( 'ams_post_types', [ 'product' ] );
+
+		// Get available post types
+		$available_post_types = get_post_types( [ 'public' => true ], 'objects' );
+		// Remove attachment from the list as it's not useful for AI
+		unset( $available_post_types['attachment'] );
+
+		// Get styling options
+		extract(AMS_WP_Plugin::get_style_options());
+
+		?>
+		<div class="wrap">
+			<h1>Assist My Shop Settings</h1>
+
+			<!-- Tab Navigation -->
+			<nav class="nav-tab-wrapper">
+				<a href="?page=ai-assistant&tab=general"
+				   class="nav-tab <?php echo $current_tab === 'general' ? 'nav-tab-active' : ''; ?>">General
+					Settings</a>
+				<a href="?page=ai-assistant&tab=styling"
+				   class="nav-tab <?php echo $current_tab === 'styling' ? 'nav-tab-active' : ''; ?>">Chat Styling</a>
+			</nav>
+
+			<?php
+            if ( $current_tab === 'general' ) {
+			    include AMS_PATH . '/templates/admin/admin-general-settings.php';
+            } elseif ( $current_tab === 'styling' ) {
+                include AMS_PATH . '/templates/admin/admin-styling-settings.php';
+			}
+            ?>
+		</div>
+
+        <script>
+            (function(){
+                const ajaxUrl = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
+                const nonce = '<?php echo wp_create_nonce( 'ams_sync' ); ?>';
+
+                function setStatus(msg) {
+                    const el = document.getElementById('sync-status');
+                    if (el) el.innerHTML = msg;
+                }
+
+                function updateProgress(progress) {
+                    const container = document.getElementById('ams-sync-progress-container');
+                    const bar = document.getElementById('ams-sync-progress');
+                    const text = document.getElementById('ams-sync-progress-text');
+                    if (!container || !bar || !text) return;
+                    if (!progress) {
+                        container.style.display = 'none';
+                        bar.style.width = '0%';
+                        text.innerText = '';
+                        return;
+                    }
+
+                    container.style.display = 'block';
+                    const overall_total = progress.overall_total || 0;
+                    const overall_processed = progress.overall_processed || 0;
+                    const percent = overall_total > 0 ? Math.min(100, Math.round((overall_processed / overall_total) * 100)) : 0;
+                    bar.style.width = percent + '%';
+                    let txt = `Overall: ${overall_processed} of ${overall_total} items (${percent}%)`;
+                    if (progress.current_post_type) {
+                        txt += ` — Currently syncing: ${progress.current_post_type} (${progress.current_processed} of ${progress.current_total})`;
+                    }
+                    text.innerText = txt;
+                }
+
+                let pollHandle = null;
+                function pollProgressUntilDone(onDone) {
+                    if (pollHandle) clearInterval(pollHandle);
+                    pollHandle = setInterval(() => {
+                        fetch(ajaxUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'action=ams_get_sync_progress'
+                        })
+                            .then(r => r.json())
+                            .then(d => {
+                                if (!d.success) {
+                                    setStatus('Failed to fetch progress');
+                                    clearInterval(pollHandle);
+                                    return;
+                                }
+                                const progress = d.progress;
+                                if (progress) {
+                                    updateProgress(progress);
+                                    setStatus('Sync in progress...');
+                                    // if finished
+                                    if (progress.overall_total > 0 && progress.overall_processed >= progress.overall_total && progress.post_types_queue && progress.post_types_queue.length === 0 && progress.step === 'orders') {
+                                        // let the next poll detect completion (option deleted by background job)
+                                    }
+                                } else {
+                                    // progress is null -> might be completed
+                                    updateProgress(null);
+                                    setStatus('Sync complete — last sync: ' + (d.last_sync || 'Unknown'));
+                                    clearInterval(pollHandle);
+                                    if (typeof onDone === 'function') onDone();
+                                }
+                            })
+                            .catch(() => {
+                                setStatus('Error polling sync progress');
+                                clearInterval(pollHandle);
+                            });
+                    }, 2000);
+                }
+
+                document.addEventListener('DOMContentLoaded', function(){
+                    const btn = document.getElementById('ams-sync-now');
+                    if (!btn) return;
+                    btn.addEventListener('click', function(){
+                        setStatus('Scheduling background sync...');
+                        fetch(ajaxUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'action=ams_sync_now&nonce=' + encodeURIComponent(nonce)
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                setStatus('Background sync scheduled — polling progress...');
+                                pollProgressUntilDone(function(){
+                                    // reload once finished to refresh UI
+                                    setTimeout(() => location.reload(), 1200);
+                                });
+                            } else {
+                                setStatus('Sync failed: ' + (data.message || 'Unknown'));
+                            }
+                        })
+                        .catch(() => setStatus('Failed to schedule sync'));
+                    });
+                });
+            })();
+        </script>
+		<?php
+	}
+
+    private function output_photo_icon_field() {
+        $media_id = get_option( 'ams_photo_icon' );
+        $media_url = $media_id ? wp_get_attachment_url( $media_id ) : '';
+        ?>
+        <input type="hidden" id="ams_photo_icon" name="ams_photo_icon" value="<?php echo esc_attr( $media_id ); ?>" class="custom_media_url" />
+        <img id="ams_photo_image_preview"
+             src="<?php echo esc_attr( $media_url ); ?>"
+             style="max-width: 100px; height: auto; display: <?php echo $media_id ? 'block' : 'none'; ?>;"
+        />
+        <button class="button ams_photo_media_upload">Upload Image</button>
+        <button class="button ams_photo_media_remove"
+                style="display: <?php echo $media_id ? 'inline-block' : 'none'; ?>;">Remove Image</button>
+        <?php
+    }
+
+    private function update_styling_options( array $POST ): void {
+        foreach ( $this->global_styling_options as $option_pair ) {
+            $option_name     = $option_pair[0];
+            $option_callback = $option_pair[1];
+            if ( isset( $POST[ $option_name ] ) ) {
+                update_option( $option_name, call_user_func( $option_callback, $POST[ $option_name ] ) );
+            }
+        }
+    }
+
+    private function update_general_options( array $POST ) {
+        update_option( 'ams_api_key', sanitize_text_field( $POST['api_key'] ) );
+        update_option( 'ams_enabled', isset( $POST['enabled'] ) ? '1' : '0' );
+        // Always use OpenAI (ChatGPT)
+        update_option( 'ams_ai_model', 'openai' );
+
+        // Handle post types selection
+        $selected_post_types = isset( $POST['post_types'] )
+                ? array_map( 'sanitize_text_field', $POST['post_types'] )
+                : [];
+        update_option( 'ams_post_types', $selected_post_types );
+    }
+
+    private function handle_submit( array $POST ): void {
+        if ( isset( $POST['tab'] ) && $POST['tab'] === 'styling' ) {
+            // Handle styling options
+            $this->update_styling_options( $POST );
+
+            echo '<div class="notice notice-success"><p>Styling settings saved!</p></div>';
+        } else {
+            // Handle general settings
+            $this->update_general_options( $POST );
+
+            echo '<div class="notice notice-success"><p>Settings saved! Store sync has been scheduled in the background.</p></div>';
+
+            // Schedule immediate background sync instead of blocking sync
+            AMS_Sync_Handler::get()->schedule_immediate_sync();
+        }
+    }
+
+    private function output_text_field( string $field_name ): void {
+        $field_value = esc_html( get_option( $field_name, '' ) );
+        echo "<input type='text' name='$field_name' id='$field_name' value='$field_value'>";
+    }
+
+    private function set_global_styling_options(): void {
+        $this->global_styling_options = [
+            [ 'ams_primary_gradient_start', 'sanitize_hex_color' ],
+            [ 'ams_primary_gradient_end', 'sanitize_hex_color' ],
+            [ 'ams_primary_gradient_color', 'sanitize_hex_color' ],
+            [ 'ams_primary_color', 'sanitize_hex_color' ],
+            [ 'ams_primary_hover', 'sanitize_hex_color' ],
+            [ 'ams_secondary_color', 'sanitize_hex_color' ],
+            [ 'ams_text_primary', 'sanitize_hex_color' ],
+            [ 'ams_text_secondary', 'sanitize_hex_color' ],
+            [ 'ams_text_light', 'sanitize_hex_color' ],
+            [ 'ams_background', 'sanitize_hex_color' ],
+            [ 'ams_background_light', 'sanitize_hex_color' ],
+            [ 'ams_border_color', 'sanitize_hex_color' ],
+            [ 'ams_border_light', 'sanitize_hex_color' ],
+            [ 'ams_photo_icon', 'sanitize_text_field' ],
+            [ 'ams_assistant_name', 'sanitize_text_field' ],
+            [ 'ams_chat_title', 'sanitize_text_field' ],
+            [ 'ams_widget_title_color', 'sanitize_hex_color' ]
+        ];
+    }
+
+}

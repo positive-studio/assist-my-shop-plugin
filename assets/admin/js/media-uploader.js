@@ -1,8 +1,8 @@
 jQuery(document).ready(function ($) {
-    var $woo_ai_photo_icon = $('#woo_ai_photo_icon');
-    var $woo_ai_photo_image_preview = $('#woo_ai_photo_image_preview')
+    var $ams_photo_icon = $('#ams_photo_icon');
+    var $ams_photo_image_preview = $('#ams_photo_image_preview')
 
-    $(document).on('click', '.woo_ai_photo_media_upload', function (e) {
+    $(document).on('click', '.ams_photo_media_upload', function (e) {
         e.preventDefault();
 
         var wp_media_frame = wp.media({
@@ -14,11 +14,11 @@ jQuery(document).ready(function ($) {
         wp_media_frame.on('select', function () {
             var attachment = wp_media_frame.state().get('selection').first().toJSON();
             // Set the input value to the attachment ID
-            $woo_ai_photo_icon.val(attachment.id);
+            $ams_photo_icon.val(attachment.id);
             // Update the image preview
-            $woo_ai_photo_image_preview.attr('src', attachment.url).show();
+            $ams_photo_image_preview.attr('src', attachment.url).show();
             // Show the remove button
-            $('.woo_ai_photo_media_remove').show();
+            $('.ams_photo_media_remove').show();
         });
 
         // Open the media frame
@@ -26,10 +26,10 @@ jQuery(document).ready(function ($) {
     });
 
     // Remove button behavior
-    $(document).on('click', '.woo_ai_photo_media_remove', function (e) {
+    $(document).on('click', '.ams_photo_media_remove', function (e) {
         e.preventDefault();
-        $woo_ai_photo_icon.val('');
-        $woo_ai_photo_image_preview.hide();
+        $ams_photo_icon.val('');
+        $ams_photo_image_preview.hide();
         $(this).hide();
     });
 });

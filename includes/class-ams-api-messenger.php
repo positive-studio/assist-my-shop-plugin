@@ -1,8 +1,8 @@
 <?php
 
-class Woo_Ai_Api_Messenger {
+class AMS_Api_Messenger {
 
-	private static ?Woo_Ai_Api_Messenger $instance = null;
+	private static ?AMS_Api_Messenger $instance = null;
 
 	/**
 	 * Base URL for the SaaS API endpoint.
@@ -10,7 +10,7 @@ class Woo_Ai_Api_Messenger {
 	 * @since 1.0.0
 	 * @var mixed
 	 */
-	private mixed $api_base_url;
+	private const API_BASE_URL = 'https://app.assistmyshop.com/api/v1';
 
 	/**
 	 * API key for authenticating with the SaaS service.
@@ -33,8 +33,7 @@ class Woo_Ai_Api_Messenger {
 	 * @return void
 	 */
 	private function define_properties(): void {
-		$this->api_base_url  = get_option( 'woo_ai_api_url', 'https://your-saas-domain.com/api/v1' );
-		$this->store_api_key = get_option( 'woo_ai_api_key', '' );
+		$this->store_api_key = get_option( 'ams_api_key', '' );
 	}
 
 	public function send_to_saas_api( $endpoint, $data ) {
@@ -42,7 +41,7 @@ class Woo_Ai_Api_Messenger {
 			$data['api_key'] = $this->store_api_key;
 		}
 
-		$response = wp_remote_post( $this->api_base_url . $endpoint, [
+		$response = wp_remote_post( self::API_BASE_URL . $endpoint, [
 			'headers' => [
 				'Content-Type' => 'application/json',
 			],
@@ -53,7 +52,18 @@ class Woo_Ai_Api_Messenger {
 		if ( is_wp_error( $response ) ) {
 			return [ 'success' => false, 'error' => $response->get_error_message() ];
 		}
-
+		if ( wp_remote_retrieve_response_code( $response ) !== 200 ) {
+			if( wp_remote_retrieve_response_code( $response ) === 401 ) {
+				return [ 'success' => false, 'error' => 'Unauthorized: Invalid API key' ];
+			}
+			if ( wp_remote_retrieve_response_code( $response ) === 403 ) {
+				return [ 'success' => false, 'error' => 'Forbidden: You do not have permission to access this resource' ];
+			}
+			if ( wp_remote_retrieve_response_code( $response ) === 404 ) {
+				return [ 'success' => false, 'error' => 'Not Found: Check your API Key'];
+			}
+			return [ 'success' => false, 'error' => 'API error: ' . wp_remote_retrieve_response_message( $response ) ];
+		}
 		$body = wp_remote_retrieve_body( $response );
 
 		return json_decode( $body, true );
@@ -67,7 +77,7 @@ class Woo_Ai_Api_Messenger {
 		// Use cURL for streaming response
 		$ch = curl_init();
 
-		curl_setopt( $ch, CURLOPT_URL, $this->api_base_url . $endpoint );
+		curl_setopt( $ch, CURLOPT_URL, self::API_BASE_URL . $endpoint );
 		curl_setopt( $ch, CURLOPT_POST, true );
 		curl_setopt( $ch, CURLOPT_POSTFIELDS, json_encode( $data ) );
 		curl_setopt( $ch, CURLOPT_HTTPHEADER, [
@@ -107,7 +117,8 @@ class Woo_Ai_Api_Messenger {
 		return ! empty( $this->store_api_key );
 	}
 
-	public static function get(): Woo_Ai_Api_Messenger {
+
+	public static function get(): AMS_Api_Messenger {
 		if ( is_null( self::$instance ) && ! ( self::$instance instanceof self ) ) {
 			self::$instance = new self();
 		}
