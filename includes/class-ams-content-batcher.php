@@ -13,44 +13,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class AMS_Content_Batcher {
 
+    // Default batch size for iterative loaders to avoid loading all items at once
+    private const DEFAULT_BATCH_SIZE = 100;
+
     public function __construct() {
     }
 
     public function get_posts_data( string $post_type ): array {
-        $posts = get_posts( [
-            'post_type'   => $post_type,
-            'post_status' => 'publish',
-            'numberposts' => - 1,
-        ] );
+        // Use batched loader to avoid loading all posts into memory at once.
+        $all = [];
+        $offset = 0;
+        $batch_size = self::DEFAULT_BATCH_SIZE;
 
-        $posts_data = [];
-        foreach ( $posts as $post ) {
-            $taxonomies = get_object_taxonomies( $post_type );
-            $terms_data = [];
-
-            foreach ( $taxonomies as $taxonomy ) {
-                $terms = wp_get_post_terms( $post->ID, $taxonomy, [ 'fields' => 'names' ] );
-                if ( ! empty( $terms ) && ! is_wp_error( $terms ) ) {
-                    $terms_data[ $taxonomy ] = $terms;
-                }
+        do {
+            $batch = $this->get_posts_data_batch( $post_type, $batch_size, $offset );
+            if ( empty( $batch ) ) {
+                break;
             }
+            $all = array_merge( $all, $batch );
+            $offset += count( $batch );
+            // Log progress per batch
+            if ( class_exists( 'AMS_Logger' ) ) {
+                AMS_Logger::log( 'Processed posts batch', [ 'post_type' => $post_type, 'batch_count' => count( $batch ), 'offset' => $offset ], 'info' );
+            }
+            // Prevent infinite loops in case of unexpected behavior
+            if ( count( $batch ) < 1 ) {
+                break;
+            }
+        } while ( count( $batch ) === $batch_size );
 
-            $posts_data[] = [
-                'id'                => $post->ID,
-                'name'              => $post->post_title,
-                'description'       => $post->post_content,
-                'short_description' => $post->post_excerpt,
-                'url'               => get_permalink( $post->ID ),
-                'date_created'      => $post->post_date,
-                'date_modified'     => $post->post_modified,
-                'author'            => get_the_author_meta( 'display_name', $post->post_author ),
-                'taxonomies'        => $terms_data,
-                'image_url'         => get_the_post_thumbnail_url( $post->ID, 'full' ),
-                'type'              => $post_type,
-            ];
-        }
-
-        return $posts_data;
+        return $all;
     }
 
     public function get_products_data(): array {
@@ -58,70 +50,85 @@ class AMS_Content_Batcher {
             return [];
         }
 
-        $products = wc_get_products( [
-            'limit'  => - 1,
-            'status' => 'publish',
-        ] );
+        $all = [];
+        $offset = 0;
+        $batch_size = self::DEFAULT_BATCH_SIZE;
 
-        $products_data = [];
-        foreach ( $products as $product ) {
-            $products_data[] = [
-                'id'                => $product->get_id(),
-                'name'              => $product->get_name(),
-                'description'       => $product->get_description(),
-                'short_description' => $product->get_short_description(),
-                'price'             => $product->get_price(),
-                'regular_price'     => $product->get_regular_price(),
-                'sale_price'        => $product->get_sale_price(),
-                'stock_quantity'    => $product->get_stock_quantity(),
-                'stock_status'      => $product->get_stock_status(),
-                'sku'               => $product->get_sku(),
-                'url'               => get_permalink( $product->get_id() ),
-                'categories'        => wp_get_post_terms( $product->get_id(), 'product_cat', [ 'fields' => 'names' ] ),
-                'tags'              => wp_get_post_terms( $product->get_id(), 'product_tag', [ 'fields' => 'names' ] ),
-                'image_url'         => get_the_post_thumbnail_url( $product->get_id(), 'full' ),
-                'type'              => 'product',
-            ];
-        }
+        do {
+            $batch = $this->get_products_data_batch( $batch_size, $offset );
+            if ( empty( $batch ) ) {
+                break;
+            }
+            $all = array_merge( $all, $batch );
+            $offset += count( $batch );
+            if ( class_exists( 'AMS_Logger' ) ) {
+                AMS_Logger::log( 'Processed products batch', [ 'batch_count' => count( $batch ), 'offset' => $offset ], 'info' );
+            }
+            if ( count( $batch ) < 1 ) {
+                break;
+            }
+        } while ( count( $batch ) === $batch_size );
 
-        return $products_data;
+        return $all;
     }
 
     public function get_posts_data_batch( string $post_type, int $limit, int $offset ): array {
-        $posts = get_posts( [
-            'post_type'   => $post_type,
-            'post_status' => 'publish',
-            'numberposts' => $limit,
-            'offset'      => $offset,
-        ] );
+        // Use WP_Query to fetch only IDs first to reduce memory usage
+        $args = [
+            'post_type'      => $post_type,
+            'post_status'    => 'publish',
+            'posts_per_page' => $limit,
+            'offset'         => $offset,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        ];
+
+        $query = new WP_Query( $args );
+        $ids = $query->posts;
+
+        if ( empty( $ids ) ) {
+            wp_reset_postdata();
+            return [];
+        }
 
         $posts_data = [];
-        foreach ( $posts as $post ) {
+        foreach ( $ids as $pid ) {
+            $post = get_post( $pid );
+            if ( ! $post ) {
+                continue;
+            }
+
             $taxonomies = get_object_taxonomies( $post_type );
             $terms_data = [];
-
             foreach ( $taxonomies as $taxonomy ) {
-                $terms = wp_get_post_terms( $post->ID, $taxonomy, [ 'fields' => 'names' ] );
+                $terms = wp_get_post_terms( $pid, $taxonomy, [ 'fields' => 'names' ] );
                 if ( ! empty( $terms ) && ! is_wp_error( $terms ) ) {
                     $terms_data[ $taxonomy ] = $terms;
                 }
             }
 
+            $thumb_id = get_post_thumbnail_id( $pid );
+            $image_url = $thumb_id ? wp_get_attachment_url( $thumb_id ) : '';
+
+            $author_id = get_post_field( 'post_author', $pid );
+            $author_name = $author_id ? get_the_author_meta( 'display_name', $author_id ) : '';
+
             $posts_data[] = [
-                'id'                => $post->ID,
+                'id'                => $pid,
                 'name'              => $post->post_title,
                 'description'       => $post->post_content,
                 'short_description' => $post->post_excerpt,
-                'url'               => get_permalink( $post->ID ),
+                'url'               => get_permalink( $pid ),
                 'date_created'      => $post->post_date,
                 'date_modified'     => $post->post_modified,
-                'author'            => get_the_author_meta( 'display_name', $post->post_author ),
+                'author'            => $author_name,
                 'taxonomies'        => $terms_data,
-                'image_url'         => get_the_post_thumbnail_url( $post->ID, 'full' ),
+                'image_url'         => $image_url,
                 'type'              => $post_type,
             ];
         }
 
+        wp_reset_postdata();
         return $posts_data;
     }
 
@@ -130,29 +137,66 @@ class AMS_Content_Batcher {
             return [];
         }
 
-        $products = wc_get_products( [
+        // Try to fetch only IDs first to reduce memory footprint. Some WC versions
+        // support returning IDs via 'return' => 'ids'. If not, fall back to objects.
+        $args = [
             'limit'  => $limit,
             'offset' => $offset,
             'status' => 'publish',
-        ] );
+            'return' => 'ids',
+        ];
+
+        $maybe_ids = wc_get_products( $args );
+
+        $product_ids = [];
+        if ( empty( $maybe_ids ) ) {
+            return [];
+        }
+
+        // If wc_get_products returned objects, convert to IDs
+        if ( is_array( $maybe_ids ) && isset( $maybe_ids[0] ) && is_object( $maybe_ids[0] ) ) {
+            foreach ( $maybe_ids as $p ) {
+                if ( is_object( $p ) && method_exists( $p, 'get_id' ) ) {
+                    $product_ids[] = $p->get_id();
+                }
+            }
+        } else {
+            // assume it's array of IDs
+            $product_ids = (array) $maybe_ids;
+        }
 
         $products_data = [];
-        foreach ( $products as $product ) {
+        foreach ( $product_ids as $pid ) {
+            $post = get_post( $pid );
+            if ( ! $post ) {
+                continue;
+            }
+
+            $price = get_post_meta( $pid, '_price', true );
+            $regular_price = get_post_meta( $pid, '_regular_price', true );
+            $sale_price = get_post_meta( $pid, '_sale_price', true );
+            $stock_quantity = get_post_meta( $pid, '_stock', true );
+            $stock_status = get_post_meta( $pid, '_stock_status', true );
+            $sku = get_post_meta( $pid, '_sku', true );
+
+            $thumb_id = get_post_thumbnail_id( $pid );
+            $image_url = $thumb_id ? wp_get_attachment_url( $thumb_id ) : '';
+
             $products_data[] = [
-                'id'                => $product->get_id(),
-                'name'              => $product->get_name(),
-                'description'       => $product->get_description(),
-                'short_description' => $product->get_short_description(),
-                'price'             => $product->get_price(),
-                'regular_price'     => $product->get_regular_price(),
-                'sale_price'        => $product->get_sale_price(),
-                'stock_quantity'    => $product->get_stock_quantity(),
-                'stock_status'      => $product->get_stock_status(),
-                'sku'               => $product->get_sku(),
-                'url'               => get_permalink( $product->get_id() ),
-                'categories'        => wp_get_post_terms( $product->get_id(), 'product_cat', [ 'fields' => 'names' ] ),
-                'tags'              => wp_get_post_terms( $product->get_id(), 'product_tag', [ 'fields' => 'names' ] ),
-                'image_url'         => get_the_post_thumbnail_url( $product->get_id(), 'full' ),
+                'id'                => $pid,
+                'name'              => $post->post_title,
+                'description'       => $post->post_content,
+                'short_description' => $post->post_excerpt,
+                'price'             => $price,
+                'regular_price'     => $regular_price,
+                'sale_price'        => $sale_price,
+                'stock_quantity'    => is_numeric( $stock_quantity ) ? intval( $stock_quantity ) : null,
+                'stock_status'      => $stock_status,
+                'sku'               => $sku,
+                'url'               => get_permalink( $pid ),
+                'categories'        => wp_get_post_terms( $pid, 'product_cat', [ 'fields' => 'names' ] ),
+                'tags'              => wp_get_post_terms( $pid, 'product_tag', [ 'fields' => 'names' ] ),
+                'image_url'         => $image_url,
                 'type'              => 'product',
             ];
         }

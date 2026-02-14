@@ -391,6 +391,29 @@
     border: 1px solid var(--ams-border-light);
 }
 
+/* Ensure any images injected into message HTML are constrained to the chat width
+   and do not overflow the widget. Also preserve aspect ratio. */
+#ams-chat-widget .ams-message-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 6px;
+    object-fit: contain;
+    margin: 6px 0;
+}
+
+/* If product cards include large images without the product-image wrapper,
+   ensure they are rendered as thumbnails inside cards. */
+#ams-chat-widget .ams-message-content .woo-ai-product-image img,
+#ams-chat-widget .ams-message-content .woo-ai-product-card img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    float: left;
+    margin-right: 10px;
+}
+
 #ams-chat-widget .ams-product-info {
     flex: 1;
 }

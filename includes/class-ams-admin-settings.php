@@ -52,10 +52,18 @@ class AMS_Admin_Settings {
 	 * @return void
 	 */
 	public function admin_page(): void {
-		// Handle form submissions
-		if ( isset( $_POST['submit'] ) ) {
-            $this->handle_submit( $_POST );
-		}
+        // Handle form submissions with nonce and capability checks
+        if ( isset( $_POST['submit'] ) ) {
+            // Verify nonce (will die with message on failure)
+            check_admin_referer( 'ams_save_settings', 'ams_settings_nonce' );
+
+            // Verify user capability
+            if ( ! current_user_can( 'manage_options' ) ) {
+                echo '<div class="notice notice-error"><p>Insufficient permissions to save settings.</p></div>';
+            } else {
+                $this->handle_submit( $_POST );
+            }
+        }
 
 		// Get current tab
 		$current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'general';

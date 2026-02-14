@@ -259,25 +259,28 @@ class AmsChat {
     }
 
     formatMessageContent(content) {
-        // Check if content contains HTML product cards mixed with text
-        if (content.includes('<div class="ams-products-grid"') || 
-            content.includes('<div class="ams-product-card"') ||
+        // Check if content contains HTML product cards/grids (support both
+        // plugin-generated `ams-*` and server `woo-ai-*` classes) mixed with text
+        const productGridRegex = /<div class="(?:ams|woo-ai)[^\"]*products?-grid"/i;
+        const productCardRegex = /<div class="(?:ams|woo-ai)[^\"]*product-card"/i;
+        if (productGridRegex.test(content) || productCardRegex.test(content) ||
             (content.includes('<img src=') && content.includes('View Product'))) {
-            
-            // Split the content into text part and HTML part
-            const htmlMatch = content.match(/(<div class="ams-products-grid">.*?<\/div>)$/s);
+
+            // Try to capture the trailing product HTML block (support various class prefixes)
+            const htmlMatch = content.match(/(<div class="(?:(?:ams|woo-ai)[^\"]*products?-grid|(?:(?:ams|woo-ai)[^\"]*product-card))">.*?<\/div>)$/si);
             if (htmlMatch) {
                 const htmlPart = htmlMatch[1];
                 const textPart = content.replace(htmlMatch[0], '').trim();
-                
+
                 // Process the text part normally (with Markdown, line breaks, etc.)
                 const processedText = this.formatTextContent(textPart);
-                
+
                 // Combine processed text with sanitized HTML
                 return processedText + '<br><br>' + this.sanitizeProductHTML(htmlPart);
             }
-            
-            // Fallback: treat entire content as product HTML
+
+            // Fallback: treat entire content as product HTML (sanitize + process
+            // markdown inside text nodes)
             return this.sanitizeProductHTML(content);
         }
 
@@ -322,6 +325,9 @@ class AmsChat {
 
         // Bold text: **text** or __text__ 
         // Handle both regular and HTML entity versions more reliably
+        // Triple-asterisk (***text***) -> bold+italic
+        parsed = parsed.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        parsed = parsed.replace(/___(.*?)___/g, '<strong><em>$1</em></strong>');
         parsed = parsed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         parsed = parsed.replace(/__(.*?)__/g, '<strong>$1</strong>');
         parsed = parsed.replace(/&#42;&#42;(.*?)&#42;&#42;/g, '<strong>$1</strong>');
@@ -411,6 +417,31 @@ class AmsChat {
         // Sanitize all elements
         Array.from(tempDiv.children).forEach(child => {
             sanitizeElement(child);
+        });
+
+        // After sanitizing tags and attributes, process any remaining Markdown
+        // inside text nodes (convert **bold**, *italic*, etc.) while keeping
+        // HTML structure intact.
+        const walk = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null, false);
+        const textNodes = [];
+        while (walk.nextNode()) {
+            textNodes.push(walk.currentNode);
+        }
+
+        textNodes.forEach(node => {
+            const txt = node.nodeValue;
+            if (!txt || !/[*_~`]/.test(txt)) return; // quick check
+
+            // Escape HTML entities then parse markdown to HTML
+            const escaped = this.escapeHtmlSafely(txt);
+            const parsed = this.parseMarkdown(escaped);
+
+            // If parsing produced HTML different from escaped text, replace the
+            // text node with the parsed HTML fragment.
+            if (parsed !== escaped) {
+                const frag = document.createRange().createContextualFragment(parsed);
+                node.parentNode.replaceChild(frag, node);
+            }
         });
 
         return tempDiv.innerHTML;

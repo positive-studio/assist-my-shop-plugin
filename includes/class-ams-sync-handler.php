@@ -113,6 +113,9 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 
 	public function sync_store_data() {
 		if ( empty( $this->api_messenger->check_api_key() ) ) {
+			if ( class_exists( 'AMS_Logger' ) ) {
+				AMS_Logger::log( 'Skipping sync_store_data: missing API key', null, 'warning' );
+			}
 			return false;
 		}
 
@@ -154,10 +157,16 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 
 		$response = $this->api_messenger->send_to_saas_api( '/store/sync', $sync_data );
 
-		error_log( print_r( $response, true ) );
+		if ( class_exists( 'AMS_Logger' ) ) {
+			AMS_Logger::log( 'store/sync response', $response, 'debug' );
+		}
 
 		if ( $response && $response['success'] ) {
 			update_option( 'ams_last_sync', current_time( 'mysql' ) );
+			// Clear any in-progress sync state — if a synchronous full sync was
+			// performed (or the SaaS responded successfully), the background
+			// progress should not remain shown in the admin UI.
+			delete_option( 'ams_sync_progress' );
 		}
 
 		return $response;
@@ -263,7 +272,8 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 		// Start with first post type
 		if ( ! empty( $sync_progress['post_types_queue'] ) ) {
 			$sync_progress['current_post_type'] = array_shift( $sync_progress['post_types_queue'] );
-			$this->init_current_post_type_sync( $sync_progress );
+			// Delegate init of counters to scheduler helper
+			$this->scheduler->init_current_post_type_sync( $sync_progress );
 		}
 
 		update_option( 'ams_sync_progress', $sync_progress );
@@ -325,25 +335,53 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 
 	#[NoReturn]
 	public function handle_sync_now(): void {
-		// Verify nonce
-		if ( ! wp_verify_nonce( $_POST['nonce'], 'ams_sync' ) ) {
-			wp_die( json_encode( [ 'success' => false, 'message' => 'Invalid nonce' ] ) );
-		}
+		// Verify nonce (AJAX)
+		check_ajax_referer( 'ams_sync', 'nonce' );
 
 		// Check user permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( json_encode( [ 'success' => false, 'message' => 'Insufficient permissions' ] ) );
+			wp_send_json_error( [ 'message' => 'Insufficient permissions' ], 403 );
 		}
 
-		$result = $this->validate_connection();
+		$result = $this->api_messenger->validate_connection();
 		if ( empty( $result ) || ! $result['success'] ) {
-			wp_die( json_encode( [ 'success' => false, 'message' => 'Connection validation failed: ' . ( $result['message'] ?? 'Unknown' ) ] ) );
+			wp_send_json_error( [ 'message' => 'Connection validation failed: ' . ( $result['message'] ?? 'Unknown' ) ], 400 );
 		}
 
 		// Schedule the background sync properly
 		$this->schedule_immediate_sync();
 
-		wp_die( json_encode( [ 'success' => true, 'message' => 'Background sync scheduled successfully' ] ) );
+		// Initialize sync progress so the admin UI can display the scheduled
+		// background job status immediately. The actual work will be performed
+		// by the scheduled `ams_background_sync` cron job.
+		$selected_post_types = get_option( 'ams_post_types', [ 'product' ] );
+		$overall_total = 0;
+		foreach ( $selected_post_types as $post_type ) {
+			if ( $post_type === 'product' && function_exists( 'wc_get_products' ) ) {
+				$count = wp_count_posts( 'product' );
+				$overall_total += $count->publish ?? 0;
+			} else {
+				$count = wp_count_posts( $post_type );
+				$overall_total += $count->publish ?? 0;
+			}
+		}
+
+		$sync_progress = [
+			'step'              => 'start',
+			'current_post_type' => null,
+			'post_types_queue'  => $selected_post_types,
+			'current_processed' => 0,
+			'current_total'     => 0,
+			'overall_processed' => 0,
+			'overall_total'     => $overall_total,
+			'batch_size'        => 50,
+		];
+
+		update_option( 'ams_sync_progress', $sync_progress );
+
+		// Background sync scheduled (execution happens via WP-Cron).
+
+		wp_send_json_success( [ 'message' => 'Background sync scheduled successfully' ] );
 	}
 
 	/**
@@ -351,13 +389,13 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 	 */
 	public function get_sync_progress(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( json_encode( [ 'success' => false, 'message' => 'Insufficient permissions' ] ) );
+			wp_send_json_error( [ 'message' => 'Insufficient permissions' ], 403 );
 		}
 
 		$sync_progress = get_option( 'ams_sync_progress', null );
 		$last_sync = get_option( 'ams_last_sync', 'Never' );
 
-		wp_die( json_encode( [ 'success' => true, 'progress' => $sync_progress, 'last_sync' => $last_sync ] ) );
+		wp_send_json_success( [ 'progress' => $sync_progress, 'last_sync' => $last_sync ] );
 	}
 
 	public static function init(): AMS_Sync_Handler {

@@ -51,11 +51,11 @@ class AMS_Chat_Manager {
 	public function handle_chat_request() {
 		check_ajax_referer( 'ams_chat', 'nonce' );
 
-		$message    = sanitize_text_field( $_POST['message'] );
-		$session_id = sanitize_text_field( $_POST['session_id'] );
+		$message    = isset( $_POST['message'] ) ? sanitize_text_field( wp_unslash( $_POST['message'] ) ) : '';
+		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) : '';
 
 		if ( empty( $message ) ) {
-			wp_die( json_encode( [ 'success' => false, 'error' => 'Message is required' ] ) );
+			wp_send_json_error( [ 'error' => 'Message is required' ], 400 );
 		}
 
 		$response = $this->api_messenger->send_to_saas_api( '/chat', [
@@ -65,16 +65,18 @@ class AMS_Chat_Manager {
 			'ai_model'   => 'openai',
 		] );
 
-		// Set proper content type and output JSON directly
-		header( 'Content-Type: application/json' );
-		wp_die( json_encode( $response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error( [ 'error' => $response->get_error_message() ], 500 );
+		}
+
+		wp_send_json( $response );
 	}
 
 	public function handle_chat_stream() {
 		check_ajax_referer( 'ams_chat', 'nonce' );
 
-		$message    = sanitize_text_field( $_POST['message'] );
-		$session_id = sanitize_text_field( $_POST['session_id'] );
+		$message    = isset( $_POST['message'] ) ? sanitize_text_field( wp_unslash( $_POST['message'] ) ) : '';
+		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) : '';
 
 		if ( empty( $message ) ) {
 			header( 'Content-Type: text/event-stream' );
@@ -94,7 +96,7 @@ class AMS_Chat_Manager {
 			ob_end_clean();
 		}
 
-		// Stream the response from SaaS API
+		// Stream the response from SaaS API (stream handler will echo/flush)
 		$this->api_messenger->stream_from_saas_api( '/chat/stream', [
 			'store_url'  => home_url(),
 			'message'    => $message,
@@ -108,10 +110,10 @@ class AMS_Chat_Manager {
 	public function handle_chat_history() {
 		check_ajax_referer( 'ams_chat', 'nonce' );
 
-		$session_id = sanitize_text_field( $_POST['session_id'] );
+		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) : '';
 
 		if ( empty( $session_id ) ) {
-			wp_die( json_encode( [ 'success' => false, 'error' => 'Session ID is required' ] ) );
+			wp_send_json_error( [ 'error' => 'Session ID is required' ], 400 );
 		}
 
 		$response = $this->api_messenger->send_to_saas_api( '/chat/history', [
@@ -121,11 +123,9 @@ class AMS_Chat_Manager {
 
 		// Ensure we always have a valid response
 		if ( ! $response || ! is_array( $response ) ) {
-			$response = [ 'success' => false, 'error' => 'Failed to retrieve chat history' ];
+			wp_send_json_error( [ 'error' => 'Failed to retrieve chat history' ], 500 );
 		}
 
-		// Set proper content type and output JSON directly
-		header( 'Content-Type: application/json' );
-		wp_die( json_encode( $response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) );
+		wp_send_json( $response );
 	}
 }

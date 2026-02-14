@@ -41,32 +41,51 @@ class AMS_Api_Messenger {
 			$data['api_key'] = $this->store_api_key;
 		}
 
+		// Don't log raw data with api_key; use logger which redacts sensitive fields
+		if ( class_exists( 'AMS_Logger' ) ) {
+			AMS_Logger::log( 'Sending request to SaaS API', [ 'endpoint' => $endpoint, 'payload' => $data ], 'debug' );
+		}
+
 		$response = wp_remote_post( self::API_BASE_URL . $endpoint, [
 			'headers' => [
 				'Content-Type' => 'application/json',
 			],
-			'body'    => json_encode( $data ),
+			'body'    => wp_json_encode( $data ),
 			'timeout' => 120,
 		] );
 
 		if ( is_wp_error( $response ) ) {
+			if ( class_exists( 'AMS_Logger' ) ) {
+				AMS_Logger::log( 'wp_remote_post error', $response->get_error_message(), 'error' );
+			}
 			return [ 'success' => false, 'error' => $response->get_error_message() ];
 		}
-		if ( wp_remote_retrieve_response_code( $response ) !== 200 ) {
-			if( wp_remote_retrieve_response_code( $response ) === 401 ) {
-				return [ 'success' => false, 'error' => 'Unauthorized: Invalid API key' ];
-			}
-			if ( wp_remote_retrieve_response_code( $response ) === 403 ) {
-				return [ 'success' => false, 'error' => 'Forbidden: You do not have permission to access this resource' ];
-			}
-			if ( wp_remote_retrieve_response_code( $response ) === 404 ) {
-				return [ 'success' => false, 'error' => 'Not Found: Check your API Key'];
-			}
-			return [ 'success' => false, 'error' => 'API error: ' . wp_remote_retrieve_response_message( $response ) ];
-		}
-		$body = wp_remote_retrieve_body( $response );
 
-		return json_decode( $body, true );
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		if ( class_exists( 'AMS_Logger' ) ) {
+			AMS_Logger::log( 'SaaS API response', [ 'endpoint' => $endpoint, 'code' => $code, 'body' => $body ], 'debug' );
+		}
+
+		// Treat any 2xx as success
+		if ( $code >= 200 && $code < 300 ) {
+			$decoded = json_decode( $body, true );
+			if ( json_last_error() !== JSON_ERROR_NONE ) {
+				return [ 'success' => false, 'error' => 'Invalid JSON response from API' ];
+			}
+			return $decoded;
+		}
+
+		switch ( $code ) {
+			case 401:
+				return [ 'success' => false, 'error' => 'Unauthorized: Invalid API key' ];
+			case 403:
+				return [ 'success' => false, 'error' => 'Forbidden: You do not have permission to access this resource' ];
+			case 404:
+				return [ 'success' => false, 'error' => 'Not Found: Check your API Key' ];
+			default:
+				return [ 'success' => false, 'error' => 'API error: ' . wp_remote_retrieve_response_message( $response ) ];
+		}
 	}
 
 	public function stream_from_saas_api( $endpoint, $data ): void {
@@ -74,12 +93,25 @@ class AMS_Api_Messenger {
 			$data['api_key'] = $this->store_api_key;
 		}
 
+		// Ensure cURL is available
+		if ( ! function_exists( 'curl_init' ) ) {
+			// Output SSE friendly error
+			header( 'Content-Type: text/event-stream' );
+			echo "data: " . json_encode( [ 'error' => 'Server does not support streaming (cURL missing)' ] ) . "\n\n";
+			flush();
+			return;
+		}
+
+		if ( class_exists( 'AMS_Logger' ) ) {
+			AMS_Logger::log( 'Starting cURL stream to SaaS API', [ 'endpoint' => $endpoint ], 'debug' );
+		}
+
 		// Use cURL for streaming response
 		$ch = curl_init();
 
 		curl_setopt( $ch, CURLOPT_URL, self::API_BASE_URL . $endpoint );
 		curl_setopt( $ch, CURLOPT_POST, true );
-		curl_setopt( $ch, CURLOPT_POSTFIELDS, json_encode( $data ) );
+		curl_setopt( $ch, CURLOPT_POSTFIELDS, wp_json_encode( $data ) );
 		curl_setopt( $ch, CURLOPT_HTTPHEADER, [
 			'Content-Type: application/json',
 			'Accept: text/event-stream',
@@ -103,9 +135,12 @@ class AMS_Api_Messenger {
 		} );
 
 		// Execute the streaming request
-		$result = curl_exec( $ch );
+		curl_exec( $ch );
 
 		if ( curl_error( $ch ) ) {
+			if ( class_exists( 'AMS_Logger' ) ) {
+				AMS_Logger::log( 'cURL streaming error', curl_error( $ch ), 'error' );
+			}
 			echo "data: " . json_encode( [ 'error' => 'Connection error: ' . curl_error( $ch ) ] ) . "\n\n";
 			flush();
 		}
@@ -117,7 +152,7 @@ class AMS_Api_Messenger {
 		return ! empty( $this->store_api_key );
 	}
 	
-	private function validate_connection(): array {
+	public function validate_connection(): array {
 		if ( empty( $this->check_api_key() ) ) {
 			return [
 				'success' => false,

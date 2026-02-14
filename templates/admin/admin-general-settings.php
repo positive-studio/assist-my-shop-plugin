@@ -17,7 +17,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 ?>
+
 <form method="post" action="">
+    <?php wp_nonce_field( 'ams_save_settings', 'ams_settings_nonce' ); ?>
 	<input type="hidden" name="tab" value="general">
 	<table class="form-table">
 		<tr>

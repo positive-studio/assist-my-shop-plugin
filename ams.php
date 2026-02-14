@@ -149,26 +149,40 @@ class AMS_WP_Plugin {
 	}
 
 	private function add_custom_styles() {
-		// Get custom color values
-		extract( self::get_style_options() );
+		// Get custom color values and sanitize
+		$styles = self::get_style_options();
 
-		$custom_css = "
-        :root {
-            --ams-chat-title-color: {$ams_widget_title_color};
-            --ams-primary-gradient-start: {$primary_gradient_start};
-            --ams-primary-gradient-end: {$primary_gradient_end};
-            --ams-primary-gradient-coloe: {$primary_gradient_color};
-            --ams-primary-color: {$primary_color};
-            --ams-primary-hover: {$primary_hover};
-            --ams-secondary-color: {$secondary_color};
-            --ams-text-primary: {$text_primary};
-            --ams-text-secondary: {$text_secondary};
-            --ams-text-light: {$text_light};
-            --ams-background: {$background};
-            --ams-background-light: {$background_light};
-            --ams-border-color: {$border_color};
-            --ams-border-light: {$border_light};
-        }";
+		$ams_widget_title_color   = sanitize_hex_color( $styles['ams_widget_title_color'] ?? '#ffffff' );
+		$primary_gradient_start   = sanitize_hex_color( $styles['primary_gradient_start'] ?? '#667eea' );
+		$primary_gradient_end     = sanitize_hex_color( $styles['primary_gradient_end'] ?? '#764ba2' );
+		$primary_gradient_color   = sanitize_hex_color( $styles['primary_gradient_color'] ?? '#ffffff' );
+		$primary_color            = sanitize_hex_color( $styles['primary_color'] ?? '#764ba2' );
+		$primary_hover            = sanitize_hex_color( $styles['primary_hover'] ?? '#6769cb' );
+		$secondary_color          = sanitize_hex_color( $styles['secondary_color'] ?? '#6769cb' );
+		$text_primary             = sanitize_hex_color( $styles['text_primary'] ?? '#333' );
+		$text_secondary           = sanitize_hex_color( $styles['text_secondary'] ?? '#666' );
+		$text_light               = sanitize_hex_color( $styles['text_light'] ?? '#999' );
+		$background               = sanitize_hex_color( $styles['background'] ?? '#ffffff' );
+		$background_light         = sanitize_hex_color( $styles['background_light'] ?? '#f8f9fa' );
+		$border_color             = sanitize_hex_color( $styles['border_color'] ?? '#e0e0e0' );
+		$border_light             = sanitize_hex_color( $styles['border_light'] ?? '#ddd' );
+
+		$custom_css = ":root {" .
+			"--ams-chat-title-color: " . esc_attr( $ams_widget_title_color ) . ";" .
+			"--ams-primary-gradient-start: " . esc_attr( $primary_gradient_start ) . ";" .
+			"--ams-primary-gradient-end: " . esc_attr( $primary_gradient_end ) . ";" .
+			"--ams-primary-gradient-color: " . esc_attr( $primary_gradient_color ) . ";" .
+			"--ams-primary-color: " . esc_attr( $primary_color ) . ";" .
+			"--ams-primary-hover: " . esc_attr( $primary_hover ) . ";" .
+			"--ams-secondary-color: " . esc_attr( $secondary_color ) . ";" .
+			"--ams-text-primary: " . esc_attr( $text_primary ) . ";" .
+			"--ams-text-secondary: " . esc_attr( $text_secondary ) . ";" .
+			"--ams-text-light: " . esc_attr( $text_light ) . ";" .
+			"--ams-background: " . esc_attr( $background ) . ";" .
+			"--ams-background-light: " . esc_attr( $background_light ) . ";" .
+			"--ams-border-color: " . esc_attr( $border_color ) . ";" .
+			"--ams-border-light: " . esc_attr( $border_light ) . ";" .
+			"}";
 
 		wp_add_inline_style( 'ams-chat', $custom_css );
 	}

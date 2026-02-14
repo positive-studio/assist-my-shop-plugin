@@ -29,6 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 <form method="post" action="">
+	<?php wp_nonce_field( 'ams_save_settings', 'ams_settings_nonce' ); ?>
 	<input type="hidden" name="tab" value="styling">
 	<p>Customize the appearance of your AI chat widget to match your brand.</p>
 	<h2>Chat Widget Styling</h2>
