@@ -2,10 +2,19 @@
 
 use JetBrains\PhpStorm\NoReturn;
 
-class AMS_Sync_Handler {
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+// Ensure interface is available
+require_once AMS_PATH . '/includes/interfaces/class-ams-sync-interface.php';
+
+class AMS_Sync_Handler implements AMS_Sync_Interface {
 
 	private static ?AMS_Sync_Handler $instance = null;
-	private ?AMS_Api_Messenger $api_messenger = null;
+	private AMS_Api_Messenger $api_messenger;
+	private AMS_Content_Batcher $content_batcher;
+	private AMS_Sync_Scheduler $scheduler;
 
 	public function __construct() {
 		$this->define_properties();
@@ -14,6 +23,17 @@ class AMS_Sync_Handler {
 
 	private function define_properties(): void {
 		$this->api_messenger = AMS_Api_Messenger::get();
+		// Content batcher handles data extraction and batching
+		if ( ! class_exists( 'AMS_Content_Batcher' ) ) {
+			require_once AMS_PATH . '/includes/class-ams-content-batcher.php';
+		}
+		$this->content_batcher = new AMS_Content_Batcher();
+
+		// Scheduler handles wp_schedule events and queue progression
+		if ( ! class_exists( 'AMS_Sync_Scheduler' ) ) {
+			require_once AMS_PATH . '/includes/class-ams-sync-scheduler.php';
+		}
+		$this->scheduler = new AMS_Sync_Scheduler();
 	}
 
 	private function add_hooks(): void {
@@ -27,10 +47,6 @@ class AMS_Sync_Handler {
 		add_action( 'ams_background_sync', [ $this, 'background_sync_store_data' ] );
 		add_action( 'wp_ajax_ams_sync_now', [ $this, 'handle_sync_now' ] );
 		add_action( 'wp_ajax_ams_get_sync_progress', [ $this, 'get_sync_progress' ] );
-	}
-
-	public function validate_api_settings(): bool {
-		return ! empty( $this->api_messenger->check_api_key() );
 	}
 
 	public function sync_post_update( $post_id, $post, $update ): void {
@@ -78,23 +94,18 @@ class AMS_Sync_Handler {
 		] );
 	}
 
-	public function schedule_sync() {
-		if ( ! wp_next_scheduled( 'ams_sync_data' ) ) {
-			//wp_schedule_event(time(), 'hourly', 'ams_sync_data');
-		}
+	public function schedule_sync(): void {
+		// Delegate scheduling to scheduler helper
+		$this->scheduler->schedule_sync();
 	}
 
 	/**
 	 * Schedule immediate background sync
 	 */
-	public function schedule_immediate_sync() {
-		// Clear any existing sync jobs first
-		wp_clear_scheduled_hook( 'ams_background_sync' );
+	public function schedule_immediate_sync(): void {
+		$this->scheduler->schedule_immediate_sync();
 
-		// Schedule immediate sync
-		wp_schedule_single_event( time() + 5, 'ams_background_sync' );
-
-		// Register the background sync action if not already registered
+		// Ensure background action is registered
 		if ( ! has_action( 'ams_background_sync', [ $this, 'background_sync_store_data' ] ) ) {
 			add_action( 'ams_background_sync', [ $this, 'background_sync_store_data' ] );
 		}
@@ -120,13 +131,13 @@ class AMS_Sync_Handler {
 		foreach ( $selected_post_types as $post_type ) {
 			if ( $post_type === 'product' && function_exists( 'wc_get_products' ) ) {
 				// Handle WooCommerce products specially
-				$content_data = $this->get_products_data();
+				$content_data = $this->content_batcher->get_products_data();
 				if ( ! empty( $content_data ) ) {
 					$all_content_data['products'] = $content_data;
 				}
 			} else {
 				// Handle other post types
-				$content_data = $this->get_posts_data( $post_type );
+				$content_data = $this->content_batcher->get_posts_data( $post_type );
 				if ( ! empty( $content_data ) ) {
 					$all_content_data[ $post_type . 's' ] = $content_data;
 				}
@@ -152,162 +163,7 @@ class AMS_Sync_Handler {
 		return $response;
 	}
 
-	/**
-	 * Get generic post data for any post type
-	 */
-	private function get_posts_data( $post_type ) {
-		$posts = get_posts( [
-			'post_type'   => $post_type,
-			'post_status' => 'publish',
-			'numberposts' => - 1,
-		] );
 
-		$posts_data = [];
-		foreach ( $posts as $post ) {
-			$taxonomies = get_object_taxonomies( $post_type );
-			$terms_data = [];
-
-			foreach ( $taxonomies as $taxonomy ) {
-				$terms = wp_get_post_terms( $post->ID, $taxonomy, [ 'fields' => 'names' ] );
-				if ( ! empty( $terms ) && ! is_wp_error( $terms ) ) {
-					$terms_data[ $taxonomy ] = $terms;
-				}
-			}
-
-			$posts_data[] = [
-				'id'                => $post->ID,
-				'name'              => $post->post_title,
-				'description'       => $post->post_content,
-				'short_description' => $post->post_excerpt,
-				'url'               => get_permalink( $post->ID ),
-				'date_created'      => $post->post_date,
-				'date_modified'     => $post->post_modified,
-				'author'            => get_the_author_meta( 'display_name', $post->post_author ),
-				'taxonomies'        => $terms_data,
-				'image_url'         => get_the_post_thumbnail_url( $post->ID, 'full' ),
-				'type'              => $post_type,
-			];
-		}
-
-		return $posts_data;
-	}
-
-	/**
-	 * Get WooCommerce products data
-	 */
-	private function get_products_data(): array {
-		if ( ! function_exists( 'wc_get_products' ) ) {
-			return [];
-		}
-
-		$products = wc_get_products( [
-			'limit'  => - 1,
-			'status' => 'publish',
-		] );
-
-		$products_data = [];
-		foreach ( $products as $product ) {
-			$products_data[] = [
-				'id'                => $product->get_id(),
-				'name'              => $product->get_name(),
-				'description'       => $product->get_description(),
-				'short_description' => $product->get_short_description(),
-				'price'             => $product->get_price(),
-				'regular_price'     => $product->get_regular_price(),
-				'sale_price'        => $product->get_sale_price(),
-				'stock_quantity'    => $product->get_stock_quantity(),
-				'stock_status'      => $product->get_stock_status(),
-				'sku'               => $product->get_sku(),
-				'url'               => get_permalink( $product->get_id() ),
-				'categories'        => wp_get_post_terms( $product->get_id(), 'product_cat', [ 'fields' => 'names' ] ),
-				'tags'              => wp_get_post_terms( $product->get_id(), 'product_tag', [ 'fields' => 'names' ] ),
-				'image_url'         => get_the_post_thumbnail_url( $product->get_id(), 'full' ),
-				'type'              => 'product',
-			];
-		}
-
-		return $products_data;
-	}
-
-	/**
-	 * Get products data in batches
-	 */
-	private function get_products_data_batch( $limit, $offset ) {
-		if ( ! function_exists( 'wc_get_products' ) ) {
-			return [];
-		}
-
-		$products = wc_get_products( [
-			'limit'  => $limit,
-			'offset' => $offset,
-			'status' => 'publish',
-		] );
-
-		$products_data = [];
-		foreach ( $products as $product ) {
-			$products_data[] = [
-				'id'                => $product->get_id(),
-				'name'              => $product->get_name(),
-				'description'       => $product->get_description(),
-				'short_description' => $product->get_short_description(),
-				'price'             => $product->get_price(),
-				'regular_price'     => $product->get_regular_price(),
-				'sale_price'        => $product->get_sale_price(),
-				'stock_quantity'    => $product->get_stock_quantity(),
-				'stock_status'      => $product->get_stock_status(),
-				'sku'               => $product->get_sku(),
-				'url'               => get_permalink( $product->get_id() ),
-				'categories'        => wp_get_post_terms( $product->get_id(), 'product_cat', [ 'fields' => 'names' ] ),
-				'tags'              => wp_get_post_terms( $product->get_id(), 'product_tag', [ 'fields' => 'names' ] ),
-				'image_url'         => get_the_post_thumbnail_url( $product->get_id(), 'full' ),
-				'type'              => 'product',
-			];
-		}
-
-		return $products_data;
-	}
-
-	/**
-	 * Sync orders (smaller batch, usually not many recent orders)
-	 */
-	private function sync_orders_batch(): array {
-		if ( ! function_exists( 'wc_get_orders' ) ) {
-			return [];
-		}
-
-		$orders = wc_get_orders( [
-			'limit'   => 50,
-			'orderby' => 'date',
-			'order'   => 'DESC',
-		] );
-
-		$orders_data = [];
-		foreach ( $orders as $order ) {
-			$orders_data[] = [
-				'id'             => $order->get_id(),
-				'status'         => $order->get_status(),
-				'total'          => $order->get_total(),
-				'date_created'   => $order->get_date_created()->date( 'Y-m-d H:i:s' ),
-				'customer_email' => $order->get_billing_email(),
-				'items'          => array_map( function ( $item ) {
-					return [
-						'name'     => $item->get_name(),
-						'quantity' => $item->get_quantity(),
-						'total'    => $item->get_total(),
-					];
-				}, $order->get_items() ),
-			];
-		}
-
-		if ( ! empty( $orders_data ) ) {
-			$this->api_messenger->send_to_saas_api( '/store/sync', [
-				'store_url' => home_url(),
-				'orders'    => $orders_data,
-			] );
-		}
-
-		return $orders_data;
-	}
 
 	/**
 	 * Complete sync and cleanup
@@ -347,11 +203,17 @@ class AMS_Sync_Handler {
 				break;
 
 			case 'content':
-				$this->sync_content_batch( $sync_progress );
+					$this->sync_content_batch( $sync_progress );
 				break;
 
 			case 'orders':
-				$this->sync_orders_batch();
+					$orders = $this->content_batcher->get_orders_batch();
+					if ( ! empty( $orders ) ) {
+						$this->api_messenger->send_to_saas_api( '/store/sync', [
+							'store_url' => home_url(),
+							'orders'    => $orders,
+						] );
+					}
 				$this->complete_sync();
 				break;
 		}
@@ -413,12 +275,7 @@ class AMS_Sync_Handler {
 	/**
 	 * Initialize sync for current post type
 	 */
-	private function init_current_post_type_sync( &$sync_progress ): void {
-		$post_type                          = $sync_progress['current_post_type'];
-		$count                              = wp_count_posts( $post_type );
-		$sync_progress['current_total']     = $count->publish ?? 0;
-		$sync_progress['current_processed'] = 0;
-	}
+
 
 	/**
 	 * Sync content in batches for current post type
@@ -430,17 +287,17 @@ class AMS_Sync_Handler {
 
 		if ( $current_post_type === 'product' && function_exists( 'wc_get_products' ) ) {
 			// Handle WooCommerce products specially
-			$content_data = $this->get_products_data_batch( $batch_size, $offset );
+			$content_data = $this->content_batcher->get_products_data_batch( $batch_size, $offset );
 			$data_key     = 'products';
 		} else {
 			// Handle other post types
-			$content_data = $this->get_posts_data_batch( $current_post_type, $batch_size, $offset );
+			$content_data = $this->content_batcher->get_posts_data_batch( $current_post_type, $batch_size, $offset );
 			$data_key     = $current_post_type . 's';
 		}
 
 		if ( empty( $content_data ) ) {
 			// No more items for current post type
-			$this->move_to_next_post_type( $sync_progress );
+			$this->scheduler->move_to_next_post_type( $sync_progress );
 
 			return;
 		}
@@ -458,92 +315,11 @@ class AMS_Sync_Handler {
 
 		// Schedule next batch if there are more items for current post type
 		if ( $sync_progress['current_processed'] < $sync_progress['current_total'] ) {
-			wp_schedule_single_event( time() + 3, 'ams_background_sync' ); // 3 second delay between batches
+			$this->scheduler->schedule_next_batch(3);
 		} else {
 			// Move to next post type
-			$this->move_to_next_post_type( $sync_progress );
+			$this->scheduler->move_to_next_post_type( $sync_progress );
 		}
-	}
-
-	/**
-	 * Move to next post type or complete content sync
-	 */
-	private function move_to_next_post_type( &$sync_progress ): void {
-		if ( ! empty( $sync_progress['post_types_queue'] ) ) {
-			// Move to next post type
-			$sync_progress['current_post_type'] = array_shift( $sync_progress['post_types_queue'] );
-			$this->init_current_post_type_sync( $sync_progress );
-			update_option( 'ams_sync_progress', $sync_progress );
-			wp_schedule_single_event( time() + 2, 'ams_background_sync' );
-		} else {
-			// All post types done, move to orders
-			$sync_progress['step'] = 'orders';
-			update_option( 'ams_sync_progress', $sync_progress );
-			wp_schedule_single_event( time() + 2, 'ams_background_sync' );
-		}
-	}
-
-	/**
-	 * Get posts data in batches
-	 */
-	private function get_posts_data_batch( $post_type, $limit, $offset ): array {
-		$posts = get_posts( [
-			'post_type'   => $post_type,
-			'post_status' => 'publish',
-			'numberposts' => $limit,
-			'offset'      => $offset,
-		] );
-
-		$posts_data = [];
-		foreach ( $posts as $post ) {
-			$taxonomies = get_object_taxonomies( $post_type );
-			$terms_data = [];
-
-			foreach ( $taxonomies as $taxonomy ) {
-				$terms = wp_get_post_terms( $post->ID, $taxonomy, [ 'fields' => 'names' ] );
-				if ( ! empty( $terms ) && ! is_wp_error( $terms ) ) {
-					$terms_data[ $taxonomy ] = $terms;
-				}
-			}
-
-			$posts_data[] = [
-				'id'                => $post->ID,
-				'name'              => $post->post_title,
-				'description'       => $post->post_content,
-				'short_description' => $post->post_excerpt,
-				'url'               => get_permalink( $post->ID ),
-				'date_created'      => $post->post_date,
-				'date_modified'     => $post->post_modified,
-				'author'            => get_the_author_meta( 'display_name', $post->post_author ),
-				'taxonomies'        => $terms_data,
-				'image_url'         => get_the_post_thumbnail_url( $post->ID, 'full' ),
-				'type'              => $post_type,
-			];
-		}
-
-		return $posts_data;
-	}
-
-	private function validate_connection(): array {
-		if ( empty( $this->api_messenger->check_api_key() ) ) {
-			return [
-				'success' => false,
-				'message' => 'API key is missing or invalid',
-			];
-		}
-		$response = $this->api_messenger->send_to_saas_api('/store/validate', [
-			'store_url' => home_url(),
-		] );
-		if ( $response == null ) {
-			return [
-				'success' => false,
-				'message' => 'No response from API',
-			];
-		}
-		return [
-			'success' => $response['success'] ?? false,
-			'message' => $response['error'] ?? 'Unknown error',
-		];
 	}
 
 

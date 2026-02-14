@@ -116,6 +116,28 @@ class AMS_Api_Messenger {
 	public function check_api_key(): bool {
 		return ! empty( $this->store_api_key );
 	}
+	
+	private function validate_connection(): array {
+		if ( empty( $this->check_api_key() ) ) {
+			return [
+				'success' => false,
+				'message' => 'API key is missing or invalid',
+			];
+		}
+		$response = $this->send_to_saas_api('/store/validate', [
+			'store_url' => home_url(),
+		] );
+		if ( $response == null ) {
+			return [
+				'success' => false,
+				'message' => 'No response from API',
+			];
+		}
+		return [
+			'success' => $response['success'] ?? false,
+			'message' => $response['error'] ?? 'Unknown error',
+		];
+	}
 
 
 	public static function get(): AMS_Api_Messenger {
