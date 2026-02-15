@@ -42,8 +42,8 @@ jobs:
             VERSION="${{ github.run_id }}"
           fi
           ZIP_NAME="assist-my-shop-plugin-${VERSION}.zip"
-          # Exclude common dev files and VCS
-          zip -r "$ZIP_NAME" "$PLUGIN_DIR" -x "*/node_modules/*" "*/.git/*" "*.DS_Store" || true
+          # Exclude common dev files and VCS (exclude top-level .git as well)
+          zip -r "$ZIP_NAME" "$PLUGIN_DIR" -x "*/node_modules/*" ".git/*" "*/.git/*" "*.DS_Store" || true
           echo "Created $ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_OUTPUT
           # Export parsed version for later steps
