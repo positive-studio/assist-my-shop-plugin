@@ -18,9 +18,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up zip (ensure installed)
-        run: sudo apt-get update && sudo apt-get install -y zip >/dev/null
-
       - id: create_zip
         name: Create plugin ZIP
         run: |
@@ -74,6 +71,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: v${{ steps.create_zip.outputs.version }}
           release_name: "Assist My Shop v${{ steps.create_zip.outputs.version }}"
           body: "Automated release for version ${{ steps.create_zip.outputs.version }}"
