@@ -151,9 +151,17 @@ class AMS_Admin_Settings {
         // Always use OpenAI (ChatGPT)
         update_option( 'ams_ai_model', 'openai' );
 
-        // Auto update option for the plugin
-        $auto_update = isset( $POST['ams_auto_update'] ) ? '1' : '0';
-        update_option( 'ams_auto_update', $auto_update );
+        // Auto update option for the plugin: update WP core `auto_update_plugins` list
+        $plugin_basename = plugin_basename( AMS_PATH . 'ams.php' );
+        $auto_updates = (array) get_option( 'auto_update_plugins', [] );
+        if ( isset( $POST['ams_auto_update'] ) ) {
+            if ( ! in_array( $plugin_basename, $auto_updates, true ) ) {
+                $auto_updates[] = $plugin_basename;
+            }
+        } else {
+            $auto_updates = array_values( array_diff( $auto_updates, [ $plugin_basename ] ) );
+        }
+        update_option( 'auto_update_plugins', $auto_updates );
 
         // Handle post types selection
         $selected_post_types = isset( $POST['post_types'] )

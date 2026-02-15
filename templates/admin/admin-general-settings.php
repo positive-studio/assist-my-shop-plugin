@@ -32,7 +32,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<tr>
 			<th scope="row">Automatic Plugin Updates</th>
 			<td>
-				<input type="checkbox" name="ams_auto_update" value="1" <?php checked( get_option( 'ams_auto_update', '0' ), '1' ); ?> />
+				<?php $plugin_basename = plugin_basename( AMS_PATH . 'ams.php' ); ?>
+				<input type="checkbox" name="ams_auto_update" value="1" <?php checked( in_array( $plugin_basename, (array) get_option( 'auto_update_plugins', [] ) ), true ); ?> />
 				<p class="description">Enable automatic updates for Assist My Shop (uses GitHub Releases).</p>
 			</td>
 		</tr>
