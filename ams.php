@@ -44,34 +44,12 @@ class AMS_WP_Plugin {
 		// Initialize GitHub auto-updater (uses releases from the configured repo)
 		// Default repo owner/name can be changed or exposed via admin settings.
 		$github_token = get_option( 'ams_github_token', '' );
-		new AMS_GitHub_Updater( __FILE__, 'pryvus/assist-my-shop-plugin', $github_token );
+		new AMS_GitHub_Updater( __FILE__, 'positive-studio/assist-my-shop-plugin', $github_token );
 
-		// Respect admin option for automatic plugin updates
-		add_filter( 'auto_update_plugin', function( $update, $item ) {
-			if ( isset( $item->plugin ) && $item->plugin === plugin_basename( __FILE__ ) ) {
-				return get_option( 'ams_auto_update', '0' ) === '1';
-			}
-			return $update;
-		}, 10, 2 );
+
 
 		// Add plugin action link in plugins list to toggle auto-updates
-		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), [ $this, 'plugin_action_links' ] );
 		add_action( 'admin_post_ams_toggle_auto_update', [ $this, 'handle_toggle_auto_update' ] );
-	}
-
-	/**
-	 * Add action link to plugin row for toggling auto-updates.
-	 */
-	public function plugin_action_links( array $links ): array {
-		$enabled = get_option( 'ams_auto_update', '0' ) === '1';
-		$action = $enabled ? 'disable' : 'enable';
-		$label = $enabled ? 'Disable auto-updates' : 'Enable auto-updates';
-
-		$nonce = wp_create_nonce( 'ams_toggle_auto_update' );
-		$url = admin_url( 'admin-post.php?action=ams_toggle_auto_update&ams_action=' . $action . '&_wpnonce=' . $nonce );
-
-		$links[] = '<a href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a>';
-		return $links;
 	}
 
 	/**
@@ -87,7 +65,17 @@ class AMS_WP_Plugin {
 		}
 
 		$action = isset( $_REQUEST['ams_action'] ) && $_REQUEST['ams_action'] === 'enable' ? 'enable' : 'disable';
-		update_option( 'ams_auto_update', $action === 'enable' ? '1' : '0' );
+
+		$plugin = plugin_basename( __FILE__ );
+		$auto_updates = (array) get_option( 'auto_update_plugins', [] );
+		if ( $action === 'enable' ) {
+			if ( ! in_array( $plugin, $auto_updates, true ) ) {
+				$auto_updates[] = $plugin;
+			}
+		} else {
+			$auto_updates = array_values( array_diff( $auto_updates, [ $plugin ] ) );
+		}
+		update_option( 'auto_update_plugins', $auto_updates );
 
 		$redirect = wp_get_referer() ? wp_get_referer() : admin_url( 'plugins.php' );
 		wp_safe_redirect( $redirect );
