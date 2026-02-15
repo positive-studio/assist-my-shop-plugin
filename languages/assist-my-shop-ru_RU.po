@@ -1,0 +1,11 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Assist My Shop 1.1.4\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ru_RU\n"
+
+#: templates/admin/admin-styling-settings.php:30
+msgid "Hello! How can I help you today?"
+msgstr "Здравствуйте! Чем я могу вам помочь сегодня?"

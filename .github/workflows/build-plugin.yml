@@ -21,6 +21,17 @@ jobs:
         run: |
           set -e
           PLUGIN_DIR="."
+          # Compile translations: generate .mo files from .po sources if msgfmt is available
+          if command -v msgfmt >/dev/null 2>&1; then
+            echo "Compiling .po -> .mo files"
+            find "$PLUGIN_DIR" -path "*/languages/*.po" -print0 | while IFS= read -r -d '' PO; do
+              MO="${PO%.po}.mo"
+              echo "  $PO -> $MO"
+              msgfmt "$PO" -o "$MO" || true
+            done
+          else
+            echo "msgfmt not found; skipping .po -> .mo compilation"
+          fi
           # Try to parse plugin version from the main plugin file header
           VERSION=$(grep -m1 -E '^\s*\*\s*Version:' ams.php || true)
           if [ -n "$VERSION" ]; then

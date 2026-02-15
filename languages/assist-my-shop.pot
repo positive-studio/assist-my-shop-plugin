@@ -1,0 +1,15 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Assist My Shop 1.1.4\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-15 00:00+0000\n"
+"PO-Revision-Date: 2026-02-15 00:00+0000\n"
+"Last-Translator: Automated\n"
+"Language-Team: Russian\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: templates/admin/admin-styling-settings.php:30
+msgid "Hello! How can I help you today?"
+msgstr ""

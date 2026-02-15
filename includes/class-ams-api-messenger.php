@@ -10,7 +10,7 @@ class AMS_Api_Messenger {
 	 * @since 1.0.0
 	 * @var mixed
 	 */
-	private const API_BASE_URL = 'https://app.assistmyshop.com/api/v1';
+	private const API_BASE_URL = 'https://api.assistmyshop.com/api/v1';
 
 	/**
 	 * API key for authenticating with the SaaS service.
