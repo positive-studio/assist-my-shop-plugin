@@ -2,9 +2,7 @@ name: Build Plugin Archive
 
 on:
   workflow_dispatch: {}
-  push:
-    tags:
-      - 'v*'
+
 permissions:
   contents: write
   packages: write
@@ -67,26 +65,12 @@ jobs:
             echo "tag_created=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create GitHub release
+      - name: Create GitHub release and upload ZIP
         if: steps.ensure_tag.outputs.tag_created == 'true'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: v${{ steps.create_zip.outputs.version }}
-          release_name: "Assist My Shop v${{ steps.create_zip.outputs.version }}"
+          tag: v${{ steps.create_zip.outputs.version }}
+          name: "Assist My Shop v${{ steps.create_zip.outputs.version }}"
           body: "Automated release for version ${{ steps.create_zip.outputs.version }}"
-          draft: false
-          prerelease: false
-
-      - name: Upload ZIP to release
-        if: steps.ensure_tag.outputs.tag_created == 'true'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ steps.create_zip.outputs.ZIP_NAME }}
-          asset_name: ${{ steps.create_zip.outputs.ZIP_NAME }}
-          asset_content_type: application/zip
+          files: ${{ steps.create_zip.outputs.ZIP_NAME }}
+          token: ${{ secrets.GITHUB_TOKEN }}
