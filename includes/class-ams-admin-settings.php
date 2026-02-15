@@ -151,6 +151,10 @@ class AMS_Admin_Settings {
         // Always use OpenAI (ChatGPT)
         update_option( 'ams_ai_model', 'openai' );
 
+        // Auto update option for the plugin
+        $auto_update = isset( $POST['ams_auto_update'] ) ? '1' : '0';
+        update_option( 'ams_auto_update', $auto_update );
+
         // Handle post types selection
         $selected_post_types = isset( $POST['post_types'] )
                 ? array_map( 'sanitize_text_field', $POST['post_types'] )

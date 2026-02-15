@@ -1,0 +1,150 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+class AMS_GitHub_Updater {
+    protected $plugin_file;
+    protected $repo;
+    protected $token;
+
+    public function __construct( $plugin_file, $repo, $token = '' ) {
+        $this->plugin_file = plugin_basename( $plugin_file );
+        $this->repo        = $repo;
+        $this->token       = $token;
+
+        add_filter( 'pre_set_site_transient_update_plugins', [ $this, 'check_update' ] );
+        add_filter( 'plugins_api', [ $this, 'plugin_info' ], 10, 3 );
+        add_filter( 'http_request_args', [ $this, 'http_request_args' ], 10, 2 );
+    }
+
+    public function check_update( $transient ) {
+        if ( empty( $transient->checked ) ) {
+            return $transient;
+        }
+
+        $current = $this->get_current_version();
+        $release = $this->get_latest_release();
+        if ( ! $release ) {
+            return $transient;
+        }
+
+        $remote_version = ltrim( $release['tag_name'] ?? '', "vV" );
+        if ( ! $remote_version ) {
+            return $transient;
+        }
+
+        if ( version_compare( $remote_version, $current, '>' ) ) {
+            $package = $this->get_download_url( $release );
+
+            $plugin = new stdClass();
+            $plugin->slug        = dirname( $this->plugin_file );
+            $plugin->new_version = $remote_version;
+            $plugin->package     = $package;
+
+            $transient->response[ $this->plugin_file ] = $plugin;
+        }
+
+        return $transient;
+    }
+
+    protected function get_current_version() {
+        if ( ! function_exists( 'get_plugin_data' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+
+        $data = get_plugin_data( WP_PLUGIN_DIR . '/' . $this->plugin_file );
+        return $data['Version'] ?? '0';
+    }
+
+    protected function get_latest_release() {
+        $url = "https://api.github.com/repos/{$this->repo}/releases/latest";
+        $args = [
+            'headers' => [
+                'Accept'     => 'application/vnd.github.v3+json',
+                'User-Agent' => 'WordPress/' . get_bloginfo( 'url' ),
+            ],
+            'timeout' => 15,
+        ];
+
+        if ( ! empty( $this->token ) ) {
+            $args['headers']['Authorization'] = 'token ' . $this->token;
+        }
+
+        $resp = wp_remote_get( $url, $args );
+        if ( is_wp_error( $resp ) ) {
+            return false;
+        }
+
+        $code = wp_remote_retrieve_response_code( $resp );
+        if ( 200 !== (int) $code ) {
+            return false;
+        }
+
+        $body = wp_remote_retrieve_body( $resp );
+        $data = json_decode( $body, true );
+        if ( ! is_array( $data ) ) {
+            return false;
+        }
+
+        return $data;
+    }
+
+    protected function get_download_url( $release ) {
+        if ( isset( $release['assets'] ) && is_array( $release['assets'] ) && ! empty( $release['assets'] ) ) {
+            return $release['assets'][0]['browser_download_url'];
+        }
+
+        if ( isset( $release['zipball_url'] ) ) {
+            return $release['zipball_url'];
+        }
+
+        return "https://github.com/{$this->repo}/archive/refs/tags/{$release['tag_name']}.zip";
+    }
+
+    public function plugin_info( $res, $action, $args ) {
+        $slug = dirname( $this->plugin_file );
+        if ( ( isset( $args->plugin ) && $args->plugin === $this->plugin_file ) || ( isset( $args->slug ) && $args->slug === $slug ) ) {
+            $release = $this->get_latest_release();
+            if ( ! $release ) {
+                return $res;
+            }
+
+            $remote_version = ltrim( $release['tag_name'] ?? '', "vV" );
+            $info = new stdClass();
+            $info->name = $release['name'] ?? $slug;
+            $info->slug = $slug;
+            $info->version = $remote_version;
+            $info->author = $release['author']['login'] ?? '';
+            $info->download_link = $this->get_download_url( $release );
+            $info->sections = [
+                'changelog' => $release['body'] ?? '',
+            ];
+
+            return $info;
+        }
+
+        return $res;
+    }
+
+    public function http_request_args( $args, $url ) {
+        if ( false !== strpos( $url, 'api.github.com' ) || false !== strpos( $url, 'github.com' ) ) {
+            if ( ! empty( $this->token ) ) {
+                if ( ! isset( $args['headers'] ) ) {
+                    $args['headers'] = [];
+                }
+                $args['headers']['Authorization'] = 'token ' . $this->token;
+            }
+
+            if ( ! isset( $args['headers']['User-Agent'] ) ) {
+                if ( ! isset( $args['headers'] ) ) {
+                    $args['headers'] = [];
+                }
+                $args['headers']['User-Agent'] = 'WordPress/' . get_bloginfo( 'url' );
+            }
+        }
+
+        return $args;
+    }
+
+}

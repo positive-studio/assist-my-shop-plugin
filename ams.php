@@ -3,7 +3,7 @@
  * Plugin Name: Assist My Shop
  * Plugin URI: https://assistmyshop.com
  * Description: An AI-powered customer support plugin for WooCommerce and WordPress. Provides a chat widget that integrates with your store's data to assist customers in real-time.
- * Version: 1.1.3
+ * Version: 1.1.4
  * Author: Pryvus Inc.
  * Author URI: https://pryvus.com
  * License: GPL v2 or later
@@ -40,6 +40,58 @@ class AMS_WP_Plugin {
 		$this->integrate_chat();
 		$this->manage_sync();
 		$this->add_admin_pages();
+
+		// Initialize GitHub auto-updater (uses releases from the configured repo)
+		// Default repo owner/name can be changed or exposed via admin settings.
+		$github_token = get_option( 'ams_github_token', '' );
+		new AMS_GitHub_Updater( __FILE__, 'pryvus/assist-my-shop-plugin', $github_token );
+
+		// Respect admin option for automatic plugin updates
+		add_filter( 'auto_update_plugin', function( $update, $item ) {
+			if ( isset( $item->plugin ) && $item->plugin === plugin_basename( __FILE__ ) ) {
+				return get_option( 'ams_auto_update', '0' ) === '1';
+			}
+			return $update;
+		}, 10, 2 );
+
+		// Add plugin action link in plugins list to toggle auto-updates
+		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), [ $this, 'plugin_action_links' ] );
+		add_action( 'admin_post_ams_toggle_auto_update', [ $this, 'handle_toggle_auto_update' ] );
+	}
+
+	/**
+	 * Add action link to plugin row for toggling auto-updates.
+	 */
+	public function plugin_action_links( array $links ): array {
+		$enabled = get_option( 'ams_auto_update', '0' ) === '1';
+		$action = $enabled ? 'disable' : 'enable';
+		$label = $enabled ? 'Disable auto-updates' : 'Enable auto-updates';
+
+		$nonce = wp_create_nonce( 'ams_toggle_auto_update' );
+		$url = admin_url( 'admin-post.php?action=ams_toggle_auto_update&ams_action=' . $action . '&_wpnonce=' . $nonce );
+
+		$links[] = '<a href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a>';
+		return $links;
+	}
+
+	/**
+	 * Handle toggle auto-update action.
+	 */
+	public function handle_toggle_auto_update(): void {
+		if ( ! current_user_can( 'update_plugins' ) ) {
+			wp_die( 'Insufficient permissions' );
+		}
+
+		if ( ! isset( $_REQUEST['_wpnonce'] ) || ! wp_verify_nonce( $_REQUEST['_wpnonce'], 'ams_toggle_auto_update' ) ) {
+			wp_die( 'Invalid nonce' );
+		}
+
+		$action = isset( $_REQUEST['ams_action'] ) && $_REQUEST['ams_action'] === 'enable' ? 'enable' : 'disable';
+		update_option( 'ams_auto_update', $action === 'enable' ? '1' : '0' );
+
+		$redirect = wp_get_referer() ? wp_get_referer() : admin_url( 'plugins.php' );
+		wp_safe_redirect( $redirect );
+		exit;
 	}
 
 	private function define_constants() {
@@ -50,6 +102,7 @@ class AMS_WP_Plugin {
 	private function add_admin_pages(): void {
 		new AMS_Admin_Settings();
 	}
+
 
 	/**
 	 * Bootstrap frontend functionality.

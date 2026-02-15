@@ -30,6 +30,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</td>
 		</tr>
 		<tr>
+			<th scope="row">Automatic Plugin Updates</th>
+			<td>
+				<input type="checkbox" name="ams_auto_update" value="1" <?php checked( get_option( 'ams_auto_update', '0' ), '1' ); ?> />
+				<p class="description">Enable automatic updates for Assist My Shop (uses GitHub Releases).</p>
+			</td>
+		</tr>
+		<tr>
 			<th scope="row">API Key</th>
 			<td>
 				<input type="text" name="api_key" value="<?php echo esc_attr( $api_key ); ?>"
