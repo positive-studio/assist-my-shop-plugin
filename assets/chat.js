@@ -16,7 +16,7 @@ class AmsChat {
 
     setGreetingMessage() {
         this.greetingMessage = 'Hello! How can I help you today?';
-        if (typeof Ams?.assistantName !== "undefined" && Ams?.assistantName) {
+        if (typeof Ams !== 'undefined' && Ams && Ams.assistantName) {
             this.greetingMessage = `Hello! My name is ${Ams.assistantName}! How can I help you today?`
         }
     }
@@ -105,7 +105,22 @@ class AmsChat {
 
     isStreamingSupported() {
         // Check if EventSource is supported and if we have a streaming endpoint
-        return typeof EventSource !== 'undefined' && Ams.AmsAjax.streaming_enabled;
+        const ams = this.getAmsAjax();
+        return (typeof EventSource !== 'undefined') && !!(ams && ams.streaming_enabled);
+    }
+
+    getAmsAjax() {
+        // Return localized Ams object safely with sensible fallbacks
+        if (typeof Ams !== 'undefined' && Ams && Ams.AmsAjax) {
+            return Ams.AmsAjax;
+        }
+
+        return {
+            ajax_url: '/wp-admin/admin-ajax.php',
+            nonce: '',
+            streaming_enabled: false,
+            store_url: window.location.origin,
+        };
     }
 
     async sendMessageStreaming(message) {
@@ -113,12 +128,13 @@ class AmsChat {
         this.showStreamingTyping();
 
         try {
-            console.log('Starting streaming request to:', Ams.AmsAjax.ajax_url);
+            const amsAjax = this.getAmsAjax();
+            console.log('Starting streaming request to:', amsAjax.ajax_url);
             
             // Use WordPress AJAX endpoint for streaming to avoid CORS issues
             const params = new URLSearchParams({
                 action: 'ams_chat_stream',
-                nonce: Ams.AmsAjax.nonce,
+                nonce: amsAjax.nonce || '',
                 message: message,
                 session_id: this.sessionId,
             });
@@ -126,7 +142,7 @@ class AmsChat {
             console.log('Streaming params:', params.toString());
 
             // Make streaming request through WordPress AJAX
-            const response = await fetch(Ams.AmsAjax.ajax_url, {
+            const response = await fetch(amsAjax.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -203,14 +219,15 @@ class AmsChat {
         this.showTyping();
 
         try {
-            const response = await fetch(Ams.AmsAjax.ajax_url, {
+            const amsAjax = this.getAmsAjax();
+            const response = await fetch(amsAjax.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
                     action: 'ams_chat',
-                    nonce: Ams.AmsAjax.nonce,
+                    nonce: amsAjax.nonce || '',
                     message: message,
                     session_id: this.sessionId,
                 }),
@@ -241,7 +258,9 @@ class AmsChat {
         
         const messageContent = document.createElement('div');
         messageContent.className = 'ams-message-content';
-        messageContent.innerHTML = this.formatMessageContent(content);
+        // Sanitize final HTML before inserting to prevent XSS (use DOMPurify if available)
+        const rawHtml = this.formatMessageContent(content);
+        messageContent.innerHTML = (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(rawHtml) : rawHtml;
 
         const messageDate = messageTime ? new Date(messageTime) : new Date();
         const timestamp = document.createElement('div');
@@ -294,7 +313,7 @@ class AmsChat {
         // First, handle literal \n characters (convert them to actual newlines)
         content = content.replace(/\\n/g, '\n');
         // Process content safely by escaping HTML first, then applying Markdown
-        let processedContent = content; //this.escapeHtmlSafely(content);
+        let processedContent = this.escapeHtmlSafely(content);
         // Apply markdown formatting
         processedContent = this.parseMarkdown(processedContent);
         // Replace URLs with clickable links
@@ -306,10 +325,41 @@ class AmsChat {
     }
 
     convertMarkdownLinksToHtml(text) {
-        return text.replace(
-            /\[([^\]]+)\]\(([^)]+)\)/g,
-            '<a target="_blank" rel="noopener noreferrer" class="ams-link" href="$2">$1</a>'
-        );
+        // Replace markdown links [text](url) but skip rendering when URL is empty
+        const escapeAttr = (s) => String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        return text.replace(/\[([^\]]+)\]\(([^)]*)\)/g, (match, p1, p2) => {
+            const linkText = p1 || '';
+            const url = (p2 || '').trim();
+
+            // If URL is empty, render only the link text (no <a>)
+            if (!url) {
+                return linkText;
+            }
+
+            // Allow only safe protocols or relative/hash links
+            const allowedProtocols = [ 'http:', 'https:', 'mailto:', 'tel:' ];
+            try {
+                // Try to construct URL relative to current origin
+                const parsed = new URL(url, window.location.origin);
+                if (!allowedProtocols.includes(parsed.protocol) && !url.startsWith('/') && !url.startsWith('#')) {
+                    return linkText;
+                }
+            } catch (e) {
+                // If URL constructor fails, only allow relative or hash or mailto/tel
+                if (!(url.startsWith('/') || url.startsWith('#') || url.startsWith('mailto:') || url.startsWith('tel:'))) {
+                    return linkText;
+                }
+            }
+
+            const safeHref = escapeAttr(url);
+            const safeText = linkText;
+            return `<a target="_blank" rel="noopener noreferrer" class="ams-link" href="${safeHref}">${safeText}</a>`;
+        });
     }
 
     escapeHtmlSafely(text) {
@@ -538,7 +588,8 @@ class AmsChat {
         // Format the content and add the streaming cursor
         const formattedContent = this.formatMessageContent(content);
         const cursor = '<span class="ams-streaming-cursor">▋</span>';
-        contentDiv.innerHTML = formattedContent + cursor;
+        const combined = formattedContent + cursor;
+        contentDiv.innerHTML = (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(combined) : combined;
 
         // Scroll to bottom
         if (this.messagesContainer) {
@@ -557,7 +608,8 @@ class AmsChat {
         contentDiv.classList.remove('ams-streaming-content');
         
         // Set final content without cursor
-        contentDiv.innerHTML = this.formatMessageContent(finalContent);
+        const finalHtml = this.formatMessageContent(finalContent);
+        contentDiv.innerHTML = (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(finalHtml) : finalHtml;
 
         // Add to messages array
         this.messages.push({ 
@@ -576,14 +628,15 @@ class AmsChat {
         if (!this.sessionId) return;
 
         try {
-            const response = await fetch(Ams.AmsAjax.ajax_url, {
+            const amsAjax = this.getAmsAjax();
+            const response = await fetch(amsAjax.ajax_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams({
                     action: 'ams_history',
-                    nonce: Ams.AmsAjax.nonce,
+                    nonce: amsAjax.nonce || '',
                     session_id: this.sessionId,
                 }),
             });

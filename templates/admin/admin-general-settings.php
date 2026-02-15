@@ -30,6 +30,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 			</td>
 		</tr>
 		<tr>
+			<th scope="row">Automatic Plugin Updates</th>
+			<td>
+				<input type="checkbox" name="ams_auto_update" value="1" <?php checked( get_option( 'ams_auto_update', '0' ), '1' ); ?> />
+				<p class="description">Enable automatic updates for Assist My Shop (uses GitHub Releases).</p>
+			</td>
+		</tr>
+		<tr>
 			<th scope="row">API Key</th>
 			<td>
 				<input type="text" name="api_key" value="<?php echo esc_attr( $api_key ); ?>"
@@ -61,16 +68,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 </form>
 
 <h2>Data Sync Status</h2>
-<p>Last sync: <?php echo get_option( 'ams_last_sync', 'Never' ); ?></p>
+<p>Last sync: <?php echo esc_html( get_option( 'ams_last_sync', 'Never' ) ); ?></p>
 <?php
 $sync_progress = get_option( 'ams_sync_progress', null );
 if ( $sync_progress ) {
 	$percent = $sync_progress['overall_total'] > 0 ?
 		round( ( $sync_progress['overall_processed'] / $sync_progress['overall_total'] ) * 100 ) : 0;
 	echo '<div class="notice notice-info inline">';
-	echo '<p><strong>Background sync in progress:</strong> ' . $sync_progress['overall_processed'] . ' of ' . $sync_progress['overall_total'] . ' items (' . $percent . '%)</p>';
+	echo '<p><strong>Background sync in progress:</strong> ' . esc_html( (string) intval( $sync_progress['overall_processed'] ) ) . ' of ' . esc_html( (string) intval( $sync_progress['overall_total'] ) ) . ' items (' . esc_html( (string) intval( $percent ) ) . '%)</p>';
 	if ( ! empty( $sync_progress['current_post_type'] ) ) {
-		echo '<p>Currently syncing: ' . esc_html( $sync_progress['current_post_type'] ) . ' (' . $sync_progress['current_processed'] . ' of ' . $sync_progress['current_total'] . ')</p>';
+		echo '<p>Currently syncing: ' . esc_html( $sync_progress['current_post_type'] ) . ' (' . esc_html( (string) intval( $sync_progress['current_processed'] ) ) . ' of ' . esc_html( (string) intval( $sync_progress['current_total'] ) ) . ')</p>';
 	}
 	echo '</div>';
 }
