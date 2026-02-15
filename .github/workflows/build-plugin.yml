@@ -68,6 +68,7 @@ jobs:
           fi
 
       - name: Create GitHub release
+        if: steps.ensure_tag.outputs.tag_created == 'true'
         id: create_release
         uses: actions/create-release@v1
         env:
@@ -80,6 +81,7 @@ jobs:
           prerelease: false
 
       - name: Upload ZIP to release
+        if: steps.ensure_tag.outputs.tag_created == 'true'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
