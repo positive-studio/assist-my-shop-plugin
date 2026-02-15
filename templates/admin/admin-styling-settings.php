@@ -215,7 +215,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         // Update preview styles
         preview.style.setProperty('--ams-primary-gradient-start', primaryGradientStart);
         preview.style.setProperty('--ams-primary-gradient-end', primaryGradientEnd);
-        preview.style.setProperty('--ams-primary-gradient-coloe', primaryGradientColor);
+		preview.style.setProperty('--ams-primary-gradient-color', primaryGradientColor);
         preview.style.setProperty('--ams-primary-color', primaryColor);
         preview.style.setProperty('--ams-primary-hover', primaryHover);
         preview.style.setProperty('--ams-secondary-color', secondaryColor);

@@ -21,6 +21,20 @@ class AMS_Admin_Settings {
             '1.0',
             true
         );
+
+        // Enqueue admin helper script for sync UI and localize data
+        wp_enqueue_script(
+            'ams-admin',
+            AMS_URL . 'assets/admin/js/ams-admin.js',
+            array( 'jquery' ),
+            '1.1.3',
+            true
+        );
+
+        wp_localize_script( 'ams-admin', 'AmsAdmin', [
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'nonce'    => wp_create_nonce( 'ams_sync' ),
+        ] );
     }
 
 	/**
@@ -103,108 +117,8 @@ class AMS_Admin_Settings {
             ?>
 		</div>
 
-        <script>
-            (function(){
-                const ajaxUrl = '<?php echo admin_url( 'admin-ajax.php' ); ?>';
-                const nonce = '<?php echo wp_create_nonce( 'ams_sync' ); ?>';
-
-                function setStatus(msg) {
-                    const el = document.getElementById('sync-status');
-                    if (el) el.innerHTML = msg;
-                }
-
-                function updateProgress(progress) {
-                    const container = document.getElementById('ams-sync-progress-container');
-                    const bar = document.getElementById('ams-sync-progress');
-                    const text = document.getElementById('ams-sync-progress-text');
-                    if (!container || !bar || !text) return;
-                    if (!progress) {
-                        container.style.display = 'none';
-                        bar.style.width = '0%';
-                        text.innerText = '';
-                        return;
-                    }
-
-                    container.style.display = 'block';
-                    const overall_total = progress.overall_total || 0;
-                    const overall_processed = progress.overall_processed || 0;
-                    const percent = overall_total > 0 ? Math.min(100, Math.round((overall_processed / overall_total) * 100)) : 0;
-                    bar.style.width = percent + '%';
-                    let txt = `Overall: ${overall_processed} of ${overall_total} items (${percent}%)`;
-                    if (progress.current_post_type) {
-                        txt += ` — Currently syncing: ${progress.current_post_type} (${progress.current_processed} of ${progress.current_total})`;
-                    }
-                    text.innerText = txt;
-                }
-
-                let pollHandle = null;
-                function pollProgressUntilDone(onDone) {
-                    if (pollHandle) clearInterval(pollHandle);
-                    pollHandle = setInterval(() => {
-                        fetch(ajaxUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: 'action=ams_get_sync_progress'
-                        })
-                            .then(r => r.json())
-                            .then(d => {
-                                if (!d.success) {
-                                    setStatus('Failed to fetch progress');
-                                    clearInterval(pollHandle);
-                                    return;
-                                }
-                                const progress = d.progress;
-                                if (progress) {
-                                    updateProgress(progress);
-                                    setStatus('Sync in progress...');
-                                    // if finished
-                                    if (progress.overall_total > 0 && progress.overall_processed >= progress.overall_total && progress.post_types_queue && progress.post_types_queue.length === 0 && progress.step === 'orders') {
-                                        // let the next poll detect completion (option deleted by background job)
-                                    }
-                                } else {
-                                    // progress is null -> might be completed
-                                    updateProgress(null);
-                                    setStatus('Sync complete — last sync: ' + (d.last_sync || 'Unknown'));
-                                    clearInterval(pollHandle);
-                                    if (typeof onDone === 'function') onDone();
-                                }
-                            })
-                            .catch(() => {
-                                setStatus('Error polling sync progress');
-                                clearInterval(pollHandle);
-                            });
-                    }, 2000);
-                }
-
-                document.addEventListener('DOMContentLoaded', function(){
-                    const btn = document.getElementById('ams-sync-now');
-                    if (!btn) return;
-                    btn.addEventListener('click', function(){
-                        setStatus('Scheduling background sync...');
-                        fetch(ajaxUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: 'action=ams_sync_now&nonce=' + encodeURIComponent(nonce)
-                        })
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.success) {
-                                setStatus('Background sync scheduled — polling progress...');
-                                pollProgressUntilDone(function(){
-                                    // reload once finished to refresh UI
-                                    setTimeout(() => location.reload(), 1200);
-                                });
-                            } else {
-                                setStatus('Sync failed: ' + (data.message || 'Unknown'));
-                            }
-                        })
-                        .catch(() => setStatus('Failed to schedule sync'));
-                    });
-                });
-            })();
-        </script>
-		<?php
-	}
+        <?php
+    }
 
     private function output_photo_icon_field() {
         $media_id = get_option( 'ams_photo_icon' );

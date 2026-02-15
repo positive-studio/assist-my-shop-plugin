@@ -130,10 +130,26 @@ class AMS_WP_Plugin {
 		wp_enqueue_script(
 			'ams-chat',
 			plugin_dir_url( __FILE__ ) . 'assets/chat.js',
-			[ 'jquery' ],
+			[ 'jquery', 'dompurify' ],
 			'1.1.3',
 			true
 		);
+
+		// Enqueue DOMPurify from CDN to sanitize HTML on the client-side
+		// Register DOMPurify first (CDN), enqueue it and provide a local fallback
+		wp_register_script(
+			'dompurify',
+			'https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js',
+			[],
+			null,
+			true
+		);
+		wp_enqueue_script( 'dompurify' );
+
+		// Inline fallback loader: if CDN fails to load DOMPurify, load bundled fallback
+		$local_fallback = esc_url( plugin_dir_url( __FILE__ ) . 'assets/vendor/dompurify.min.js' );
+		$inline = "(function(){ if (typeof DOMPurify === 'undefined') { var s = document.createElement('script'); s.src = '" . $local_fallback . "'; s.async = false; document.head.appendChild(s); } })();";
+		wp_add_inline_script( 'dompurify', $inline );
 
 		wp_enqueue_style(
 			'ams-chat',

@@ -34,7 +34,7 @@ class AMS_Chat_Manager {
                         if ( $media_url && ! empty( $media_url[0] ) ): ?>
                             <img src="<?php echo esc_url( $media_url[0] ); ?>" class="ams-chat-photo">
                         <?php endif; ?>
-                        <h4 class="ams-chat-title"><?php echo get_option( 'ams_chat_title', 'AI Assitant' ); ?></h4>
+						<h4 class="ams-chat-title"><?php echo esc_html( get_option( 'ams_chat_title', 'AI Assistant' ) ); ?></h4>
                     </div>
                     <button id="ams-chat-close">&times;</button>
                 </div>

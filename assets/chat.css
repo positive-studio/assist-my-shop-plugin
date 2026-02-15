@@ -3,7 +3,7 @@
     --ams-chat-title-color: #ffffff;
     --ams-primary-gradient-start: #667eea;
     --ams-primary-gradient-end: #764ba2;
-    --ams-primary-gradient-coloe: #ffffff;
+    --ams-primary-gradient-color: #ffffff;
     --ams-primary-color: #764ba2;
     --ams-primary-hover: #6769cb;
     --ams-secondary-color: #6769cb;
@@ -437,7 +437,7 @@
     display: inline-block;
     padding: 6px 12px;
     background: linear-gradient(135deg, var(--ams-primary-gradient-start) 0%, var(--ams-primary-gradient-end) 100%);
-    color: var(--ams-primary-gradient-coloe);
+    color: var(--ams-primary-gradient-color);
     text-decoration: none;
     border-radius: 4px;
     font-size: 14px;
