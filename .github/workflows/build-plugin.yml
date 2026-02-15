@@ -81,6 +81,8 @@ jobs:
 
       - name: Upload ZIP to release
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ steps.create_zip.outputs.ZIP_NAME }}
