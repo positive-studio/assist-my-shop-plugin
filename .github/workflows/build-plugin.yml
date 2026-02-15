@@ -46,6 +46,41 @@ jobs:
           name: assist-my-shop-plugin-${{ steps.create_zip.outputs.version }}
           path: ${{ steps.create_zip.outputs.ZIP_NAME || 'assist-my-shop-plugin-*.zip' }}
 
-      - name: List artifacts
-        if: always()
-        run: ls -lh
+      - name: Ensure git tag exists and push if missing
+        id: ensure_tag
+        env:
+          VERSION: ${{ steps.create_zip.outputs.version }}
+        run: |
+          set -e
+          TAG="v${VERSION}"
+          echo "Checking for tag $TAG on remote"
+          if git ls-remote --tags "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" refs/tags/${TAG} | grep -q refs/tags/${TAG}; then
+            echo "Tag exists: $TAG"
+            echo "tag_created=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag missing; creating $TAG"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git remote set-url origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+            echo "tag_created=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: v${{ steps.create_zip.outputs.version }}
+          release_name: "Assist My Shop v${{ steps.create_zip.outputs.version }}"
+          body: "Automated release for version ${{ steps.create_zip.outputs.version }}"
+          draft: false
+          prerelease: false
+
+      - name: Upload ZIP to release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.create_zip.outputs.ZIP_NAME }}
+          asset_name: ${{ steps.create_zip.outputs.ZIP_NAME }}
+          asset_content_type: application/zip
