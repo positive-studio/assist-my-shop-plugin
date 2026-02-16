@@ -83,5 +83,5 @@ jobs:
           tag: v${{ steps.create_zip.outputs.version }}
           name: "Assist My Shop v${{ steps.create_zip.outputs.version }}"
           body: "Automated release for version ${{ steps.create_zip.outputs.version }}"
-          files: ${{ steps.create_zip.outputs.ZIP_NAME }}
+          artifacts: ${{ steps.create_zip.outputs.ZIP_NAME }}
           token: ${{ secrets.GITHUB_TOKEN }}
