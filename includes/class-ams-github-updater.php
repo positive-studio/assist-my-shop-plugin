@@ -16,6 +16,7 @@ class AMS_GitHub_Updater {
         add_filter( 'pre_set_site_transient_update_plugins', [ $this, 'check_update' ] );
         add_filter( 'plugins_api', [ $this, 'plugin_info' ], 10, 3 );
         add_filter( 'http_request_args', [ $this, 'http_request_args' ], 10, 2 );
+        add_filter( 'plugin_auto_update_setting_html', [ $this, 'render_auto_update_setting_html' ], 10, 3 );
     }
 
     public function check_update( $transient ) {
@@ -34,15 +35,35 @@ class AMS_GitHub_Updater {
             return $transient;
         }
 
+        $slug = dirname( $this->plugin_file );
+        $base = new stdClass();
+        $base->id          = 'github.com/' . $this->repo;
+        $base->plugin      = $this->plugin_file;
+        $base->slug        = $slug;
+        $base->url         = 'https://github.com/' . $this->repo;
+        $base->new_version = $remote_version;
+        $base->package     = '';
+
         if ( version_compare( $remote_version, $current, '>' ) ) {
             $package = $this->get_download_url( $release );
 
             $plugin = new stdClass();
-            $plugin->slug        = dirname( $this->plugin_file );
+            $plugin->id          = 'github.com/' . $this->repo;
+            $plugin->plugin      = $this->plugin_file;
+            $plugin->slug        = $slug;
+            $plugin->url         = 'https://github.com/' . $this->repo;
             $plugin->new_version = $remote_version;
             $plugin->package     = $package;
 
             $transient->response[ $this->plugin_file ] = $plugin;
+            if ( isset( $transient->no_update[ $this->plugin_file ] ) ) {
+                unset( $transient->no_update[ $this->plugin_file ] );
+            }
+        } else {
+            $transient->no_update[ $this->plugin_file ] = $base;
+            if ( isset( $transient->response[ $this->plugin_file ] ) ) {
+                unset( $transient->response[ $this->plugin_file ] );
+            }
         }
 
         return $transient;
@@ -145,6 +166,37 @@ class AMS_GitHub_Updater {
         }
 
         return $args;
+    }
+
+    /**
+     * Ensure auto-update toggle is visible for this plugin, even when core
+     * marks update-supported as unavailable for non-dotorg sources.
+     */
+    public function render_auto_update_setting_html( string $html, string $plugin_file, array $plugin_data ): string {
+        if ( $plugin_file !== $this->plugin_file ) {
+            return $html;
+        }
+        // Always render our own toggle for this plugin. Core can return
+        // "unavailable" as non-empty but visually blank HTML for non-dotorg plugins.
+
+        $auto_updates = (array) get_site_option( 'auto_update_plugins', [] );
+        $enabled = in_array( $this->plugin_file, $auto_updates, true );
+        $action  = $enabled ? 'disable-auto-update' : 'enable-auto-update';
+        $text    = $enabled ? __( 'Disable auto-updates' ) : __( 'Enable auto-updates' );
+        $url     = add_query_arg(
+            [
+                'action' => $action,
+                'plugin' => $this->plugin_file,
+            ],
+            'plugins.php'
+        );
+
+        return sprintf(
+            '<a href="%s" class="toggle-auto-update aria-button-if-js" data-wp-action="%s"><span class="label">%s</span></a>',
+            esc_url( wp_nonce_url( $url, 'updates' ) ),
+            esc_attr( $enabled ? 'disable' : 'enable' ),
+            esc_html( $text )
+        );
     }
 
 }
