@@ -2,6 +2,7 @@
 /**
  * Plugin Name: Assist My Shop
  * Plugin URI: https://assistmyshop.com
+ * Update URI: https://github.com/positive-studio/assist-my-shop-plugin
  * Description: An AI-powered customer support plugin for WooCommerce and WordPress. Provides a chat widget that integrates with your store's data to assist customers in real-time.
  * Version: 1.1.6
  * Author: Pryvus Inc.
@@ -49,40 +50,6 @@ class AMS_WP_Plugin {
 		$github_token = get_option( 'ams_github_token', '' );
 		new AMS_GitHub_Updater( __FILE__, 'positive-studio/assist-my-shop-plugin', $github_token );
 
-
-
-		// Add plugin action link in plugins list to toggle auto-updates
-		add_action( 'admin_post_ams_toggle_auto_update', [ $this, 'handle_toggle_auto_update' ] );
-	}
-
-	/**
-	 * Handle toggle auto-update action.
-	 */
-	public function handle_toggle_auto_update(): void {
-		if ( ! current_user_can( 'update_plugins' ) ) {
-			wp_die( 'Insufficient permissions' );
-		}
-
-		if ( ! isset( $_REQUEST['_wpnonce'] ) || ! wp_verify_nonce( $_REQUEST['_wpnonce'], 'ams_toggle_auto_update' ) ) {
-			wp_die( 'Invalid nonce' );
-		}
-
-		$action = isset( $_REQUEST['ams_action'] ) && $_REQUEST['ams_action'] === 'enable' ? 'enable' : 'disable';
-
-		$plugin = plugin_basename( __FILE__ );
-		$auto_updates = (array) get_option( 'auto_update_plugins', [] );
-		if ( $action === 'enable' ) {
-			if ( ! in_array( $plugin, $auto_updates, true ) ) {
-				$auto_updates[] = $plugin;
-			}
-		} else {
-			$auto_updates = array_values( array_diff( $auto_updates, [ $plugin ] ) );
-		}
-		update_option( 'auto_update_plugins', $auto_updates );
-
-		$redirect = wp_get_referer() ? wp_get_referer() : admin_url( 'plugins.php' );
-		wp_safe_redirect( $redirect );
-		exit;
 	}
 
 	private function define_constants() {
