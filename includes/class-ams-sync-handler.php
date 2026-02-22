@@ -9,18 +9,54 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Ensure interface is available
 require_once AMS_PATH . '/includes/interfaces/class-ams-sync-interface.php';
 
+/**
+ * Sync orchestrator that coordinates data extraction and background jobs.
+ */
 class AMS_Sync_Handler implements AMS_Sync_Interface {
 
+	/**
+	 * Singleton instance.
+	 *
+	 * @var AMS_Sync_Handler|null
+	 */
 	private static ?AMS_Sync_Handler $instance = null;
+
+	/**
+	 * API messenger instance.
+	 *
+	 * @var AMS_Api_Messenger
+	 */
 	private AMS_Api_Messenger $api_messenger;
+
+	/**
+	 * Content batcher service.
+	 *
+	 * @var AMS_Content_Batcher
+	 */
 	private AMS_Content_Batcher $content_batcher;
+
+	/**
+	 * Scheduler helper.
+	 *
+	 * @var AMS_Sync_Scheduler
+	 */
 	private AMS_Sync_Scheduler $scheduler;
 
+	/**
+	 * Constructor.
+	 *
+	 * @return void Initializes services and registers hooks.
+	 */
 	public function __construct() {
 		$this->define_properties();
 		$this->add_hooks();
 	}
 
+	/**
+	 * Initialize service dependencies.
+	 *
+	 * @return void
+	 */
 	private function define_properties(): void {
 		$this->api_messenger = AMS_Api_Messenger::get();
 		// Content batcher handles data extraction and batching
@@ -36,6 +72,11 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 		$this->scheduler = new AMS_Sync_Scheduler();
 	}
 
+	/**
+	 * Register WordPress hooks for sync lifecycle.
+	 *
+	 * @return void
+	 */
 	private function add_hooks(): void {
 		// Generic post type hooks for data sync
 		add_action( 'save_post', [ $this, 'sync_post_update' ], 10, 3 );
@@ -49,6 +90,14 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 		add_action( 'wp_ajax_ams_get_sync_progress', [ $this, 'get_sync_progress' ] );
 	}
 
+	/**
+	 * Handle post save/update event for configured post types.
+	 *
+	 * @param int     $post_id Post ID being saved.
+	 * @param WP_Post $post    Post object.
+	 * @param bool    $update  Whether this is an existing post update.
+	 * @return void Schedules partial sync when eligible.
+	 */
 	public function sync_post_update( $post_id, $post, $update ): void {
 		// Skip if this is an autosave, revision, or not a public post
 		if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) || $post->post_status !== 'publish' ) {
@@ -72,6 +121,12 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 		wp_schedule_single_event( time() + 60, 'ams_sync_data' );
 	}
 
+	/**
+	 * Handle post delete/trash event for configured post types.
+	 *
+	 * @param int $post_id Deleted post ID.
+	 * @return void Sends deletion payload when eligible.
+	 */
 	public function sync_post_delete( $post_id ): void {
 		$post = get_post( $post_id );
 		if ( ! $post ) {
@@ -94,13 +149,20 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 		] );
 	}
 
+	/**
+	 * Ensure recurring sync schedule exists.
+	 *
+	 * @return void
+	 */
 	public function schedule_sync(): void {
 		// Delegate scheduling to scheduler helper
 		$this->scheduler->schedule_sync();
 	}
 
 	/**
-	 * Schedule immediate background sync
+	 * Schedule immediate background sync.
+	 *
+	 * @return void
 	 */
 	public function schedule_immediate_sync(): void {
 		$this->scheduler->schedule_immediate_sync();
@@ -111,6 +173,11 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 		}
 	}
 
+	/**
+	 * Perform full synchronous store sync.
+	 *
+	 * @return array<string, mixed>|false Sync response data or false on early exit.
+	 */
 	public function sync_store_data() {
 		if ( empty( $this->api_messenger->check_api_key() ) ) {
 			if ( class_exists( 'AMS_Logger' ) ) {
@@ -175,7 +242,9 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 
 
 	/**
-	 * Complete sync and cleanup
+	 * Complete sync and cleanup.
+	 *
+	 * @return void
 	 */
 	private function complete_sync(): void {
 		delete_option( 'ams_sync_progress' );
@@ -186,7 +255,9 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 	}
 
 	/**
-	 * Background sync that processes data in batches
+	 * Execute one background sync step.
+	 *
+	 * @return mixed Step result, or false when API key is missing.
 	 */
 	public function background_sync_store_data() {
 		if ( empty( $this->api_messenger->check_api_key() ) ) {
@@ -229,7 +300,9 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 	}
 
 	/**
-	 * Sync store info (quick, non-blocking)
+	 * Sync store information payload.
+	 *
+	 * @return void
 	 */
 	private function sync_store_info() {
 		$store_info = [
@@ -249,7 +322,10 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 	}
 
 	/**
-	 * Initialize content sync for all selected post types
+	 * Initialize queued post types and counters for background sync.
+	 *
+	 * @param array<string, mixed> $sync_progress Mutable progress payload.
+	 * @return void
 	 */
 	private function init_content_sync( &$sync_progress ): void {
 		$selected_post_types                = get_option( 'ams_post_types', [ 'product' ] );
@@ -288,7 +364,10 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 
 
 	/**
-	 * Sync content in batches for current post type
+	 * Sync one content batch for the current post type.
+	 *
+	 * @param array<string, mixed> $sync_progress Mutable progress payload.
+	 * @return void
 	 */
 	private function sync_content_batch( &$sync_progress ): void {
 		$current_post_type = $sync_progress['current_post_type'];
@@ -333,6 +412,11 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 	}
 
 
+	/**
+	 * Handle AJAX request to start background sync.
+	 *
+	 * @return void Sends JSON response and terminates execution.
+	 */
 	#[NoReturn]
 	public function handle_sync_now(): void {
 		// Verify nonce (AJAX)
@@ -340,7 +424,7 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 
 		// Check user permissions
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( [ 'message' => 'Insufficient permissions' ], 403 );
+			wp_send_json_error( [ 'message' => __( 'Insufficient permissions', 'assist-my-shop' ) ], 403 );
 		}
 
 		$result = $this->api_messenger->validate_connection();
@@ -385,11 +469,13 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 	}
 
 	/**
-	 * Return current sync progress for polling in the admin UI
+	 * Return current sync progress for polling in the admin UI.
+	 *
+	 * @return void Sends JSON response with progress state.
 	 */
 	public function get_sync_progress(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( [ 'message' => 'Insufficient permissions' ], 403 );
+			wp_send_json_error( [ 'message' => __( 'Insufficient permissions', 'assist-my-shop' ) ], 403 );
 		}
 
 		$sync_progress = get_option( 'ams_sync_progress', null );
@@ -398,10 +484,20 @@ class AMS_Sync_Handler implements AMS_Sync_Interface {
 		wp_send_json_success( [ 'progress' => $sync_progress, 'last_sync' => $last_sync ] );
 	}
 
+	/**
+	 * Bootstrap sync handler singleton.
+	 *
+	 * @return AMS_Sync_Handler Shared handler instance.
+	 */
 	public static function init(): AMS_Sync_Handler {
 		return self::get();
 	}
 
+	/**
+	 * Get sync handler singleton instance.
+	 *
+	 * @return AMS_Sync_Handler Shared handler instance.
+	 */
 	public static function get(): AMS_Sync_Handler {
 		if ( is_null( self::$instance ) && ! ( self::$instance instanceof self ) ) {
 			self::$instance = new self();

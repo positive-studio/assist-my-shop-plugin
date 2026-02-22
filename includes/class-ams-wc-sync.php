@@ -9,6 +9,10 @@
  * @since   1.0.0
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * Class Woocommerce_Sync
  *

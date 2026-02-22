@@ -40,55 +40,7 @@
         if (!preview) {
             return;
         }
-
-        const widgetTitleColor = getOptionValue('ams_widget_title_color', '#ffffff');
-        const primaryGradientStart = getOptionValue('ams_primary_gradient_start', '#667eea');
-        const primaryGradientEnd = getOptionValue('ams_primary_gradient_end', '#764ba2');
-        const primaryGradientColor = getOptionValue('ams_primary_gradient_color', '#ffffff');
-        const primaryColor = getOptionValue('ams_primary_color', '#764ba2');
-        const textPrimary = getOptionValue('ams_text_primary', '#333333');
-        const background = getOptionValue('ams_background', '#ffffff');
-        const backgroundLight = getOptionValue('ams_background_light', '#f8f9fa');
-        const borderColor = getOptionValue('ams_border_color', '#e0e0e0');
-        const borderLight = getOptionValue('ams_border_light', '#dddddd');
-
-        preview.innerHTML = `
-            <div style="background: linear-gradient(135deg, ${primaryGradientStart} 0%, ${primaryGradientEnd} 100%); color: ${primaryGradientColor}; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
-                <h4 style="margin: 0; font-size: 16px; color: ${widgetTitleColor};">Assist My Shop</h4>
-                <span style="font-size: 12px;">●</span>
-            </div>
-            <div style="flex: 1; padding: 16px; background: ${background}; overflow-y: auto;">
-                <div style="margin-bottom: 12px;">
-                    <div style="background: ${backgroundLight}; padding: 8px 12px; border-radius: 18px; display: inline-block; max-width: 80%;">
-                        <p style="margin: 0; color: ${textPrimary}; font-size: 14px;">${helloPrompt}</p>
-                    </div>
-                </div>
-                <div style="margin-bottom: 12px; text-align: right;">
-                    <div style="background: linear-gradient(135deg, ${primaryGradientStart} 0%, ${primaryGradientEnd} 100%); color: ${primaryGradientColor}; padding: 8px 12px; border-radius: 18px; display: inline-block; max-width: 80%;">
-                        <p style="margin: 0; font-size: 14px;">I'm looking for a hoodie</p>
-                    </div>
-                </div>
-                <div style="margin-bottom: 12px;">
-                    <div style="background: ${backgroundLight}; padding: 8px 12px; border-radius: 18px; display: inline-block; max-width: 80%;">
-                        <p style="margin: 0; color: ${textPrimary}; font-size: 14px;">Here are some great hoodies:</p>
-                        <div style="margin-top: 8px; padding: 8px; border: 1px solid ${borderColor}; border-radius: 6px; background: ${background};">
-                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                <div style="width: 40px; height: 40px; background: ${borderLight}; border-radius: 4px; margin-right: 8px;"></div>
-                                <div style="flex: 1;">
-                                    <h4 style="margin: 0 0 4px 0; font-size: 12px; color: ${textPrimary};">Hoodie with Logo</h4>
-                                    <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; color: ${primaryColor};">$45.00</p>
-                                    <a href="#" style="display: inline-block; padding: 4px 8px; background: linear-gradient(135deg, ${primaryGradientStart} 0%, ${primaryGradientEnd} 100%); color: ${primaryGradientColor}; text-decoration: none; border-radius: 3px; font-size: 10px;">View Product</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div style="padding: 16px; border-top: 1px solid ${borderColor}; background: ${backgroundLight}; display: flex; gap: 8px;">
-                <input type="text" placeholder="Type your message..." style="flex: 1; padding: 8px 12px; border: 1px solid ${borderColor}; border-radius: 20px; background: ${background}; color: ${textPrimary}; font-size: 14px;" />
-                <button style="width: 40px; height: 40px; background: linear-gradient(135deg, ${primaryGradientStart} 0%, ${primaryGradientEnd} 100%); color: ${primaryGradientColor}; border: none; border-radius: 50%; cursor: pointer;">→</button>
-            </div>
-        `;
+        preview.textContent = helloPrompt;
     }
 
     const builderTargets = {
@@ -244,8 +196,8 @@
         controls.innerHTML = target.fields.map((field) => {
             const value = getOptionValue(field.option, '#000000');
             return `
-                <div style="margin-bottom: 10px;">
-                    <label style="display: block; margin-bottom: 4px;">${field.label}</label>
+                <div class="ams-builder-control-row">
+                    <label class="ams-builder-control-label">${field.label}</label>
                     <input type="color" data-builder-option="${field.option}" value="${value}">
                 </div>
             `;

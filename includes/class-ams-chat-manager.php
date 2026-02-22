@@ -1,8 +1,25 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Frontend chat widget renderer and AJAX handlers.
+ */
 class AMS_Chat_Manager {
+    /**
+     * API messenger service instance.
+     *
+     * @var AMS_Api_Messenger|null
+     */
     private ?AMS_Api_Messenger $api_messenger;
     
+	/**
+	 * Constructor.
+	 *
+	 * @return void Initializes messenger and registers hooks.
+	 */
 	public function __construct() {
         $this->api_messenger = AMS_Api_Messenger::get();
         
@@ -15,6 +32,11 @@ class AMS_Chat_Manager {
 		add_action( 'wp_ajax_nopriv_ams_history', [ $this, 'handle_chat_history' ] );
 	}
 
+	/**
+	 * Render chat widget markup in footer.
+	 *
+	 * @return void Outputs widget HTML when plugin is enabled.
+	 */
 	public function add_chat_widget() {
 		if ( get_option( 'ams_enabled', '1' ) !== '1' ) {
 			return;
@@ -46,14 +68,19 @@ class AMS_Chat_Manager {
                 </div>
 				<div id="ams-chat-messages"></div>
 				<div id="ams-chat-input-container">
-					<input type="text" id="ams-chat-input" placeholder="Ask me..."/>
-					<button id="ams-chat-send">Send</button>
+					<input type="text" id="ams-chat-input" placeholder="<?php echo esc_attr__( 'Ask me...', 'assist-my-shop' ); ?>"/>
+					<button id="ams-chat-send"><?php esc_html_e( 'Send', 'assist-my-shop' ); ?></button>
 				</div>
 			</div>
 		</div>
 		<?php
 	}
 
+	/**
+	 * Handle non-streaming chat AJAX request.
+	 *
+	 * @return void Sends JSON response to client.
+	 */
 	public function handle_chat_request() {
 		check_ajax_referer( 'ams_chat', 'nonce' );
 
@@ -61,7 +88,7 @@ class AMS_Chat_Manager {
 		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) : '';
 
 		if ( empty( $message ) ) {
-			wp_send_json_error( [ 'error' => 'Message is required' ], 400 );
+			wp_send_json_error( [ 'error' => __( 'Message is required', 'assist-my-shop' ) ], 400 );
 		}
 
 		$response = $this->api_messenger->send_to_saas_api( '/chat', [
@@ -78,6 +105,11 @@ class AMS_Chat_Manager {
 		wp_send_json( $response );
 	}
 
+	/**
+	 * Handle streaming chat AJAX request.
+	 *
+	 * @return void Streams SSE response to client.
+	 */
 	public function handle_chat_stream() {
 		check_ajax_referer( 'ams_chat', 'nonce' );
 
@@ -86,7 +118,7 @@ class AMS_Chat_Manager {
 
 		if ( empty( $message ) ) {
 			header( 'Content-Type: text/event-stream' );
-			echo "data: " . json_encode( [ 'error' => 'Message is required' ] ) . "\n\n";
+			echo "data: " . wp_json_encode( [ 'error' => __( 'Message is required', 'assist-my-shop' ) ] ) . "\n\n";
 			wp_die();
 		}
 
@@ -113,13 +145,18 @@ class AMS_Chat_Manager {
 		wp_die();
 	}
 
+	/**
+	 * Handle chat history AJAX request.
+	 *
+	 * @return void Sends JSON response with history data.
+	 */
 	public function handle_chat_history() {
 		check_ajax_referer( 'ams_chat', 'nonce' );
 
 		$session_id = isset( $_POST['session_id'] ) ? sanitize_text_field( wp_unslash( $_POST['session_id'] ) ) : '';
 
 		if ( empty( $session_id ) ) {
-			wp_send_json_error( [ 'error' => 'Session ID is required' ], 400 );
+			wp_send_json_error( [ 'error' => __( 'Session ID is required', 'assist-my-shop' ) ], 400 );
 		}
 
 		$response = $this->api_messenger->send_to_saas_api( '/chat/history', [
@@ -129,7 +166,7 @@ class AMS_Chat_Manager {
 
 		// Ensure we always have a valid response
 		if ( ! $response || ! is_array( $response ) ) {
-			wp_send_json_error( [ 'error' => 'Failed to retrieve chat history' ], 500 );
+			wp_send_json_error( [ 'error' => __( 'Failed to retrieve chat history', 'assist-my-shop' ) ], 500 );
 		}
 
 		wp_send_json( $response );

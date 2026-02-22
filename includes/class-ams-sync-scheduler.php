@@ -9,13 +9,23 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+/**
+ * Scheduler helper for background sync queue orchestration.
+ */
 class AMS_Sync_Scheduler {
 
+    /**
+     * Constructor.
+     *
+     * @return void
+     */
     public function __construct() {
     }
 
     /**
      * Schedule an immediate background sync.
+     *
+     * @return void
      */
     public function schedule_immediate_sync(): void {
         // Clear any existing sync jobs first
@@ -27,6 +37,8 @@ class AMS_Sync_Scheduler {
 
     /**
      * Ensure periodic schedule exists (no-op placeholder for now).
+     *
+     * @return void
      */
     public function schedule_sync(): void {
         if ( ! wp_next_scheduled( 'ams_sync_data' ) ) {
@@ -36,6 +48,9 @@ class AMS_Sync_Scheduler {
 
     /**
      * Schedule next batch run after given delay in seconds.
+     *
+     * @param int $delay Delay in seconds before next batch run.
+     * @return void
      */
     public function schedule_next_batch( int $delay = 2 ): void {
         wp_schedule_single_event( time() + $delay, 'ams_background_sync' );
@@ -43,6 +58,9 @@ class AMS_Sync_Scheduler {
 
     /**
      * Initialize sync counters for the current post type.
+     *
+     * @param array<string, mixed> $sync_progress Mutable sync progress payload.
+     * @return void
      */
     public function init_current_post_type_sync( array &$sync_progress ): void {
         $post_type = $sync_progress['current_post_type'];
@@ -53,6 +71,9 @@ class AMS_Sync_Scheduler {
 
     /**
      * Move to next post type or mark step as orders and schedule next batch.
+     *
+     * @param array<string, mixed> $sync_progress Mutable sync progress payload.
+     * @return void
      */
     public function move_to_next_post_type( array &$sync_progress ): void {
         if ( ! empty( $sync_progress['post_types_queue'] ) ) {
