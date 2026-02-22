@@ -181,6 +181,7 @@ class AMS_Content_Batcher {
 
             $thumb_id = get_post_thumbnail_id( $pid );
             $image_url = $thumb_id ? wp_get_attachment_url( $thumb_id ) : '';
+            $attributes = $this->get_product_attributes_data( $pid );
 
             $products_data[] = [
                 'id'                => $pid,
@@ -196,12 +197,74 @@ class AMS_Content_Batcher {
                 'url'               => get_permalink( $pid ),
                 'categories'        => wp_get_post_terms( $pid, 'product_cat', [ 'fields' => 'names' ] ),
                 'tags'              => wp_get_post_terms( $pid, 'product_tag', [ 'fields' => 'names' ] ),
+                'attributes'        => $attributes,
                 'image_url'         => $image_url,
                 'type'              => 'product',
             ];
         }
 
         return $products_data;
+    }
+
+    /**
+     * Return all WooCommerce product attributes (global + custom) in a normalized format.
+     */
+    private function get_product_attributes_data( int $product_id ): array {
+        if ( ! function_exists( 'wc_get_product' ) ) {
+            return [];
+        }
+
+        $product = wc_get_product( $product_id );
+        if ( ! $product || ! method_exists( $product, 'get_attributes' ) ) {
+            return [];
+        }
+
+        $attributes = $product->get_attributes();
+        if ( empty( $attributes ) || ! is_array( $attributes ) ) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ( $attributes as $key => $attribute ) {
+            if ( ! is_object( $attribute ) || ! method_exists( $attribute, 'get_name' ) ) {
+                continue;
+            }
+
+            $taxonomy_name = $attribute->get_name();
+            $is_taxonomy = method_exists( $attribute, 'is_taxonomy' ) ? (bool) $attribute->is_taxonomy() : false;
+
+            $options = [];
+            if ( $is_taxonomy ) {
+                $terms = wc_get_product_terms( $product_id, $taxonomy_name, [ 'fields' => 'names' ] );
+                if ( ! is_wp_error( $terms ) && is_array( $terms ) ) {
+                    $options = array_values( array_filter( $terms, static function ( $value ) {
+                        return $value !== null && $value !== '';
+                    } ) );
+                }
+            } elseif ( method_exists( $attribute, 'get_options' ) ) {
+                $raw_options = $attribute->get_options();
+                if ( is_array( $raw_options ) ) {
+                    $options = array_values( array_filter( array_map( static function ( $value ) {
+                        return is_scalar( $value ) ? (string) $value : '';
+                    }, $raw_options ), static function ( $value ) {
+                        return $value !== '';
+                    } ) );
+                }
+            }
+
+            $normalized[] = [
+                'name'      => (string) $taxonomy_name,
+                'label'     => function_exists( 'wc_attribute_label' ) ? (string) wc_attribute_label( $taxonomy_name ) : (string) $taxonomy_name,
+                'options'   => $options,
+                'visible'   => method_exists( $attribute, 'get_visible' ) ? (bool) $attribute->get_visible() : true,
+                'variation' => method_exists( $attribute, 'get_variation' ) ? (bool) $attribute->get_variation() : false,
+                'position'  => method_exists( $attribute, 'get_position' ) ? (int) $attribute->get_position() : 0,
+                'source'    => $is_taxonomy ? 'taxonomy' : 'custom',
+            ];
+        }
+
+        return $normalized;
     }
 
     public function get_orders_batch( int $limit = 50 ): array {
