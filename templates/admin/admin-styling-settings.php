@@ -2,26 +2,7 @@
 /**
  * Admin Styling Settings Template
  *
- * This template displays the styling settings page for the Woo AI plugin,
- * allowing customization of the chat widget appearance.
- *
  * @package Woo_AI
- *
- * @var string $ams_chat_title         The chat widget title.
- * @var string $ams_widget_title_color Color for chat widget title.
- * @var string $primary_gradient_start    Start color for the gradient background.
- * @var string $primary_gradient_end      End color for the gradient background.
- * @var string $primary_gradient_color    Text color for gradient elements.
- * @var string $primary_color             Main brand color for buttons and links.
- * @var string $primary_hover             Hover state color for buttons and links.
- * @var string $secondary_color           Secondary accent color.
- * @var string $text_primary              Main text color.
- * @var string $text_secondary            Secondary text color.
- * @var string $text_light                Light text color for timestamps and metadata.
- * @var string $background                Main background color.
- * @var string $background_light          Light background color for input areas.
- * @var string $border_color              Main border color.
- * @var string $border_light              Light border color for subtle elements.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -33,6 +14,64 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<input type="hidden" name="tab" value="styling">
 	<p>Customize the appearance of your AI chat widget to match your brand.</p>
 	<h2>Chat Widget Styling</h2>
+
+	<style>
+		.ams-preset-cards {
+			display: flex;
+			gap: 12px;
+			flex-wrap: wrap;
+			margin-top: 10px;
+		}
+		.ams-preset-card {
+			border: 1px solid #ccd0d4;
+			border-radius: 8px;
+			background: #fff;
+			cursor: pointer;
+			padding: 8px;
+			width: 180px;
+			text-align: left;
+		}
+		.ams-preset-card.is-active {
+			border-color: #2271b1;
+			box-shadow: 0 0 0 1px #2271b1;
+		}
+		.ams-preset-card strong {
+			display: block;
+			margin-bottom: 6px;
+		}
+		.ams-preset-mini {
+			width: 100%;
+			height: 110px;
+			border-radius: 8px;
+			overflow: hidden;
+			border: 1px solid #dcdcde;
+		}
+		.ams-preset-mini-header {
+			height: 26px;
+			width: 100%;
+		}
+		.ams-preset-mini-body {
+			padding: 8px;
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			height: calc(100% - 26px);
+			box-sizing: border-box;
+		}
+		.ams-preset-mini-bubble {
+			border-radius: 10px;
+			height: 16px;
+		}
+		.ams-preset-mini-bubble.user {
+			align-self: flex-end;
+			width: 64%;
+		}
+		.ams-preset-mini-bubble.assistant {
+			align-self: flex-start;
+			width: 76%;
+		}
+	</style>
+
 	<table class="form-table">
 		<tbody>
 		<tr>
@@ -52,251 +91,147 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<p class="description"><?php _e( 'Set assistant\'s name for the intro chat message.' ); ?></p>
 			</td>
 		</tr>
-		</tbody>
-		<tbody>
 		<tr>
-			<th scope="row"><h3>Chat Widget Appearance</h3></th>
-		</tr>
-		<tr>
-			<th scope="row">Widget Title</th>
+			<th><?php _e( 'Widget Title' )?></th>
 			<td>
 				<?php $this->output_text_field( 'ams_chat_title' ); ?>
 				<p class="description"><?php _e('Set chat widget title (visible if photo icon is not set)' ); ?></p>
 			</td>
 		</tr>
-        <tr>
-            <th scope="row">Widget Title Color</th>
-            <td>
-                <input type="color" name="ams_widget_title_color"
-                       value="<?php echo esc_attr( $ams_widget_title_color ); ?>"/>
-                <p class="description"><?php _e('Color for chat widget title' ); ?></p>
-            </td>
-        </tr>
-		<tr>
-			<th scope="row">Primary Gradient Start</th>
-			<td>
-				<input type="color" name="primary_gradient_start"
-				       value="<?php echo esc_attr( $primary_gradient_start ); ?>"/>
-				<p class="description">Start color for the gradient background</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Primary Gradient End</th>
-			<td>
-				<input type="color" name="primary_gradient_end"
-				       value="<?php echo esc_attr( $primary_gradient_end ); ?>"/>
-				<p class="description">End color for the gradient background</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Primary Gradient Text Color</th>
-			<td>
-				<input type="color" name="primary_gradient_color"
-				       value="<?php echo esc_attr( $primary_gradient_color ); ?>"/>
-				<p class="description">Text color for gradient elements</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Primary Color</th>
-			<td>
-				<input type="color" name="primary_color"
-				       value="<?php echo esc_attr( $primary_color ); ?>"/>
-				<p class="description">Main brand color for buttons and links</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Primary Hover Color</th>
-			<td>
-				<input type="color" name="primary_hover"
-				       value="<?php echo esc_attr( $primary_hover ); ?>"/>
-				<p class="description">Hover state color for buttons and links</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Secondary Color</th>
-			<td>
-				<input type="color" name="secondary_color"
-				       value="<?php echo esc_attr( $secondary_color ); ?>"/>
-				<p class="description">Secondary accent color</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Primary Text Color</th>
-			<td>
-				<input type="color" name="text_primary"
-				       value="<?php echo esc_attr( $text_primary ); ?>"/>
-				<p class="description">Main text color</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Secondary Text Color</th>
-			<td>
-				<input type="color" name="text_secondary"
-				       value="<?php echo esc_attr( $text_secondary ); ?>"/>
-				<p class="description">Secondary text color</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Light Text Color</th>
-			<td>
-				<input type="color" name="text_light" value="<?php echo esc_attr( $text_light ); ?>"/>
-				<p class="description">Light text color for timestamps and metadata</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Background Color</th>
-			<td>
-				<input type="color" name="background" value="<?php echo esc_attr( $background ); ?>"/>
-				<p class="description">Main background color</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Light Background Color</th>
-			<td>
-				<input type="color" name="background_light"
-				       value="<?php echo esc_attr( $background_light ); ?>"/>
-				<p class="description">Light background color for input areas</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Border Color</th>
-			<td>
-				<input type="color" name="border_color"
-				       value="<?php echo esc_attr( $border_color ); ?>"/>
-				<p class="description">Main border color</p>
-			</td>
-		</tr>
-		<tr>
-			<th scope="row">Light Border Color</th>
-			<td>
-				<input type="color" name="border_light"
-				       value="<?php echo esc_attr( $border_light ); ?>"/>
-				<p class="description">Light border color for subtle elements</p>
-			</td>
-		</tr>
 		</tbody>
 	</table>
-	<?php submit_button( 'Save Styling Settings' ); ?>
-	<button type="button" class="button" onclick="resetToDefaults()" style="margin-left: 10px;">Reset to
-		Defaults
-	</button>
-</form>
 
-<div class="ams-preview"
-     style="margin-top: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
-	<h3>Live Preview</h3>
-	<p>Preview how your chat widget will look with the current settings:</p>
-	<div id="ams-preview-widget"
-	     style="position: relative; width: 300px; height: 400px; border: 1px solid #ccc; border-radius: 12px; overflow: hidden; background: var(--ams-background, #ffffff);">
-		<!-- Preview content will be generated by JavaScript -->
+	<h3>Chat Widget Appearance</h3>
+	<p>Click an element in the preview, choose a color, then save.</p>
+
+	<div style="display: grid; grid-template-columns: 360px 1fr; gap: 18px; align-items: start; max-width: 1200px;">
+		<div>
+			<div id="ams-builder-preview-widget"
+			     style="position: relative; width: 340px; height: 470px; border: 1px solid #ccd0d4; border-radius: 12px; overflow: hidden; background: #ffffff;">
+				<div data-builder-target="header_gradient"
+				     style="padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+					<div data-builder-target="header_text" style="font-size: 16px; font-weight: 600; cursor: pointer;">Assist My Shop</div>
+					<div style="font-size: 18px; line-height: 1;">×</div>
+				</div>
+
+				<div data-builder-target="widget_background" style="padding: 14px; height: 336px; overflow: auto; box-sizing: border-box; cursor: pointer;">
+					<div style="margin-bottom: 12px;">
+						<div data-builder-target="assistant_bubble_bg"
+						     style="display: inline-block; max-width: 84%; border-radius: 14px; padding: 8px 10px; cursor: pointer;">
+							<span data-builder-target="assistant_text" style="cursor: pointer;">Hello! How can I help you today?</span>
+						</div>
+					</div>
+					<div style="margin-bottom: 12px; text-align: right;">
+						<div data-builder-target="user_bubble_bg"
+						     style="display: inline-block; max-width: 84%; border-radius: 14px; padding: 8px 10px; cursor: pointer;">
+							<span data-builder-target="user_text" style="cursor: pointer;">I need black sneakers</span>
+						</div>
+					</div>
+					<div style="margin-bottom: 12px;">
+						<div data-builder-target="assistant_bubble_bg"
+						     style="display: inline-block; max-width: 92%; border-radius: 14px; padding: 8px 10px; cursor: pointer;">
+							<span data-builder-target="assistant_text" style="cursor: pointer;">Great choice! Here is one option:</span>
+							<div data-builder-target="card_border"
+							     style="margin-top: 8px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px;">
+								<div style="display: flex; gap: 8px;">
+									<div data-builder-target="card_thumb_bg" style="width: 52px; height: 52px; border-radius: 6px; flex-shrink: 0; cursor: pointer; outline: 1px dashed rgba(0,0,0,0.2);" title="Product Thumbnail Placeholder"></div>
+									<div style="flex: 1;">
+										<div data-builder-target="assistant_text" style="font-size: 12px; font-weight: 600; margin-bottom: 4px;">Running Shoe Pro</div>
+										<div data-builder-target="price_text" style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">$89.99</div>
+										<button type="button" data-builder-target="button_bg" style="border: none; border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer;">View Product</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div data-builder-target="meta_text" style="font-size: 11px; margin-top: 6px; cursor: pointer;">04:35 PM</div>
+				</div>
+
+				<div data-builder-target="input_area_bg"
+				     style="padding: 12px; border-top: 1px solid #e0e0e0; display: flex; gap: 8px; cursor: pointer;">
+					<input type="text" value="Ask me..."
+					       style="flex: 1; border: 1px solid #ddd; border-radius: 20px; padding: 8px 12px; font-size: 14px;" readonly>
+					<button type="button" data-builder-target="button_bg"
+					        style="border: none; border-radius: 20px; padding: 8px 14px; cursor: pointer;">Send</button>
+				</div>
+			</div>
+		</div>
+
+		<div>
+			<div class="postbox" style="padding: 14px;">
+				<h3 style="margin-top: 0;">Element Color Editor</h3>
+				<p style="margin-top: 0;">Selected: <strong id="ams-builder-selected-label">None</strong></p>
+				<div id="ams-builder-controls"></div>
+			</div>
+
+			<div class="postbox" style="padding: 14px; margin-top: 12px;">
+				<h3 style="margin-top: 0;">Presets</h3>
+				<div class="ams-preset-cards">
+					<button type="button" class="ams-preset-card" data-preset="light">
+						<strong>Light</strong>
+						<div class="ams-preset-mini">
+							<div class="ams-preset-mini-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+							<div class="ams-preset-mini-body" style="background: #ffffff;">
+								<div class="ams-preset-mini-bubble assistant" style="background: #f1f3f5;"></div>
+								<div class="ams-preset-mini-bubble user" style="background: #764ba2;"></div>
+							</div>
+						</div>
+					</button>
+					<button type="button" class="ams-preset-card" data-preset="dark">
+						<strong>Dark</strong>
+						<div class="ams-preset-mini">
+							<div class="ams-preset-mini-header" style="background: linear-gradient(135deg, #7b2ff7 0%, #f107a3 100%);"></div>
+							<div class="ams-preset-mini-body" style="background: #16052f;">
+								<div class="ams-preset-mini-bubble assistant" style="background: #22103d;"></div>
+								<div class="ams-preset-mini-bubble user" style="background: #b144ff;"></div>
+							</div>
+						</div>
+					</button>
+					<button type="button" class="ams-preset-card" data-preset="warm_pastel">
+						<strong>Warm Pastel</strong>
+						<div class="ams-preset-mini">
+							<div class="ams-preset-mini-header" style="background: linear-gradient(135deg, #d57a8c 0%, #c9875e 100%);"></div>
+							<div class="ams-preset-mini-body" style="background: #fff8f4;">
+								<div class="ams-preset-mini-bubble assistant" style="background: #f7e5db;"></div>
+								<div class="ams-preset-mini-bubble user" style="background: #bc6b53;"></div>
+							</div>
+						</div>
+					</button>
+					<button type="button" class="ams-preset-card" data-preset="clean">
+						<strong>Clean</strong>
+						<div class="ams-preset-mini">
+							<div class="ams-preset-mini-header" style="background: linear-gradient(135deg, #1f7ae0 0%, #24b3ff 100%);"></div>
+							<div class="ams-preset-mini-body" style="background: #ffffff;">
+								<div class="ams-preset-mini-bubble assistant" style="background: #f4f9ff;"></div>
+								<div class="ams-preset-mini-bubble user" style="background: #1889eb;"></div>
+							</div>
+						</div>
+					</button>
+				</div>
+			</div>
+
+			<?php
+			$hidden_colors = [
+				'ams_widget_title_color'     => $ams_widget_title_color,
+				'ams_primary_gradient_start' => $primary_gradient_start,
+				'ams_primary_gradient_end'   => $primary_gradient_end,
+				'ams_primary_gradient_color' => $primary_gradient_color,
+				'ams_primary_color'          => $primary_color,
+				'ams_primary_hover'          => $primary_hover,
+				'ams_secondary_color'        => $secondary_color,
+				'ams_text_primary'           => $text_primary,
+				'ams_text_secondary'         => $text_secondary,
+				'ams_text_light'             => $text_light,
+				'ams_background'             => $background,
+				'ams_background_light'       => $background_light,
+				'ams_border_color'           => $border_color,
+				'ams_border_light'           => $border_light,
+			];
+			foreach ( $hidden_colors as $name => $value ) : ?>
+				<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>">
+			<?php endforeach; ?>
+		</div>
 	</div>
-</div>
-<?php $hello_prompt = __( 'Hello! How can I help you today?', 'assist-my-shop' ); ?>
-<script>
-	window.ams_i18n = window.ams_i18n || {};
-	window.ams_i18n.hello_prompt = <?php echo wp_json_encode( $hello_prompt ); ?>;
 
-    // Live preview functionality
-    function updatePreview() {
-        const preview = document.getElementById('ams-preview-widget');
-        if (!preview) return;
-
-        // Get current color values
-        const primaryGradientStart = document.querySelector('input[name="primary_gradient_start"]').value;
-        const primaryGradientEnd = document.querySelector('input[name="primary_gradient_end"]').value;
-        const primaryGradientColor = document.querySelector('input[name="primary_gradient_color"]').value;
-        const primaryColor = document.querySelector('input[name="primary_color"]').value;
-        const primaryHover = document.querySelector('input[name="primary_hover"]').value;
-        const secondaryColor = document.querySelector('input[name="secondary_color"]').value;
-        const textPrimary = document.querySelector('input[name="text_primary"]').value;
-        const textSecondary = document.querySelector('input[name="text_secondary"]').value;
-        const textLight = document.querySelector('input[name="text_light"]').value;
-        const background = document.querySelector('input[name="background"]').value;
-        const backgroundLight = document.querySelector('input[name="background_light"]').value;
-        const borderColor = document.querySelector('input[name="border_color"]').value;
-        const borderLight = document.querySelector('input[name="border_light"]').value;
-
-        // Update preview styles
-        preview.style.setProperty('--ams-primary-gradient-start', primaryGradientStart);
-        preview.style.setProperty('--ams-primary-gradient-end', primaryGradientEnd);
-		preview.style.setProperty('--ams-primary-gradient-color', primaryGradientColor);
-        preview.style.setProperty('--ams-primary-color', primaryColor);
-        preview.style.setProperty('--ams-primary-hover', primaryHover);
-        preview.style.setProperty('--ams-secondary-color', secondaryColor);
-        preview.style.setProperty('--ams-text-primary', textPrimary);
-        preview.style.setProperty('--ams-text-secondary', textSecondary);
-        preview.style.setProperty('--ams-text-light', textLight);
-        preview.style.setProperty('--ams-background', background);
-        preview.style.setProperty('--ams-background-light', backgroundLight);
-        preview.style.setProperty('--ams-border-color', borderColor);
-        preview.style.setProperty('--ams-border-light', borderLight);
-
-        // Update preview content
-        preview.innerHTML = `
-                <div style="background: linear-gradient(135deg, ${primaryGradientStart} 0%, ${primaryGradientEnd} 100%); color: ${primaryGradientColor}; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
-                    <h4 style="margin: 0; font-size: 16px;">Assist My Shop</h4>
-                    <span style="font-size: 12px;">●</span>
-                </div>
-                <div style="flex: 1; padding: 16px; background: ${background}; overflow-y: auto;">
-                    <div style="margin-bottom: 12px;">
-                        <div style="background: ${backgroundLight}; padding: 8px 12px; border-radius: 18px; display: inline-block; max-width: 80%;">
-							<p style="margin: 0; color: ${textPrimary}; font-size: 14px;">${window.ams_i18n && window.ams_i18n.hello_prompt ? window.ams_i18n.hello_prompt : 'Hello! How can I help you today?'}</p>
-                        </div>
-                    </div>
-                    <div style="margin-bottom: 12px; text-align: right;">
-                        <div style="background: ${primaryColor}; color: white; padding: 8px 12px; border-radius: 18px; display: inline-block; max-width: 80%;">
-                            <p style="margin: 0; font-size: 14px;">I'm looking for a hoodie</p>
-                        </div>
-                    </div>
-                    <div style="margin-bottom: 12px;">
-                        <div style="background: ${backgroundLight}; padding: 8px 12px; border-radius: 18px; display: inline-block; max-width: 80%;">
-                            <p style="margin: 0; color: ${textPrimary}; font-size: 14px;">Here are some great hoodies:</p>
-                            <div style="margin-top: 8px; padding: 8px; border: 1px solid ${borderColor}; border-radius: 6px; background: ${background};">
-                                <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                    <div style="width: 40px; height: 40px; background: ${borderLight}; border-radius: 4px; margin-right: 8px;"></div>
-                                    <div style="flex: 1;">
-                                        <h4 style="margin: 0 0 4px 0; font-size: 12px; color: ${textPrimary};">Hoodie with Logo</h4>
-                                        <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold; color: ${primaryColor};">$45.00</p>
-                                        <a href="#" style="display: inline-block; padding: 4px 8px; background: linear-gradient(135deg, ${primaryGradientStart} 0%, ${primaryGradientEnd} 100%); color: ${primaryGradientColor}; text-decoration: none; border-radius: 3px; font-size: 10px;">View Product</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div style="padding: 16px; border-top: 1px solid ${borderColor}; background: ${backgroundLight}; display: flex; gap: 8px;">
-                    <input type="text" placeholder="Type your message..." style="flex: 1; padding: 8px 12px; border: 1px solid ${borderColor}; border-radius: 20px; background: ${background}; color: ${textPrimary}; font-size: 14px;" />
-                    <button style="width: 40px; height: 40px; background: linear-gradient(135deg, ${primaryGradientStart} 0%, ${primaryGradientEnd} 100%); color: ${primaryGradientColor}; border: none; border-radius: 50%; cursor: pointer;">→</button>
-                </div>
-            `;
-    }
-
-    // Reset to default colors
-    function resetToDefaults() {
-        if (confirm('Are you sure you want to reset all colors to their default values?')) {
-            document.querySelector('input[name="primary_gradient_start"]').value = '#667eea';
-            document.querySelector('input[name="primary_gradient_end"]').value = '#764ba2';
-            document.querySelector('input[name="primary_gradient_color"]').value = '#ffffff';
-            document.querySelector('input[name="primary_color"]').value = '#764ba2';
-            document.querySelector('input[name="primary_hover"]').value = '#6769cb';
-            document.querySelector('input[name="secondary_color"]').value = '#6769cb';
-            document.querySelector('input[name="text_primary"]').value = '#333';
-            document.querySelector('input[name="text_secondary"]').value = '#666';
-            document.querySelector('input[name="text_light"]').value = '#999';
-            document.querySelector('input[name="background"]').value = '#ffffff';
-            document.querySelector('input[name="background_light"]').value = '#f8f9fa';
-            document.querySelector('input[name="border_color"]').value = '#e0e0e0';
-            document.querySelector('input[name="border_light"]').value = '#ddd';
-            updatePreview();
-        }
-    }
-
-    // Add event listeners to color inputs
-    document.addEventListener('DOMContentLoaded', function () {
-        const colorInputs = document.querySelectorAll('input[type="color"]');
-        colorInputs.forEach(input => {
-            input.addEventListener('input', updatePreview);
-        });
-        updatePreview(); // Initial preview
-    });
-</script>
+	<?php submit_button( 'Save Styling Settings' ); ?>
+</form>

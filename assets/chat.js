@@ -329,7 +329,7 @@ class AmsChat {
         const productGridRegex = /<div class="(?:ams|woo-ai)[^\"]*products?-grid"/i;
         const productCardRegex = /<div class="(?:ams|woo-ai)[^\"]*product-card"/i;
         if (productGridRegex.test(content) || productCardRegex.test(content) ||
-            (content.includes('<img src=') && content.includes('View Product'))) {
+            (content.includes('<img src=') && content.includes('View'))) {
 
             // Try to capture the trailing product HTML block (support various class prefixes)
             const htmlMatch = content.match(/(<div class="(?:(?:ams|woo-ai)[^\"]*products?-grid|(?:(?:ams|woo-ai)[^\"]*product-card))">.*?<\/div>)$/si);
@@ -383,7 +383,7 @@ class AmsChat {
         const price = this.formatProductPrice(product.price);
 
         const actions = [
-            `<a href="${productUrl}" target="_blank" rel="noopener noreferrer">View Product</a>`,
+            `<a href="${productUrl}" target="_blank" rel="noopener noreferrer">View</a>`,
             `<a href="${addToCartUrl}" target="_blank" rel="noopener noreferrer">Add to Cart</a>`,
         ]
             .filter(Boolean)
