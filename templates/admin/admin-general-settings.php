@@ -23,6 +23,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<input type="hidden" name="tab" value="general">
 	<table class="form-table">
 		<tr>
+			<th scope="row">Connection Status</th>
+			<td>
+				<span id="ams-connection-indicator" style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#9ca3af; margin-right:8px; vertical-align:middle;"></span>
+				<span id="ams-connection-status-text">Checking connection...</span>
+				<p class="description">Live status of plugin connection to backend API.</p>
+			</td>
+		</tr>
+		<tr>
 			<th scope="row">Enable Assist My Shop</th>
 			<td>
 				<input type="checkbox" name="enabled" value="1" <?php checked( $enabled, '1' ); ?> />

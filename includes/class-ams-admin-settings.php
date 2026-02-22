@@ -9,9 +9,10 @@ class AMS_Admin_Settings {
 
 		add_action( 'admin_menu', [ $this, 'add_admin_menu' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+        add_action( 'wp_ajax_ams_check_connection', [ $this, 'handle_connection_check' ] );
 	}
 
-    public function enqueue_admin_assets(): void {
+    public function enqueue_admin_assets( string $hook_suffix ): void {
         // Enqueue the WordPress media script
         wp_enqueue_media();
         wp_enqueue_script(
@@ -35,6 +36,21 @@ class AMS_Admin_Settings {
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'nonce'    => wp_create_nonce( 'ams_sync' ),
         ] );
+
+        if ( 'settings_page_ai-assistant' === $hook_suffix ) {
+            wp_enqueue_script(
+                'ams-styling-tools',
+                AMS_URL . 'assets/admin/js/ams-styling-tools.js',
+                [],
+                '1.0.0',
+                true
+            );
+
+            wp_localize_script( 'ams-styling-tools', 'AmsStylingTools', [
+                'hello_prompt' => __( 'Hello! How can I help you today?', 'assist-my-shop' ),
+                'presets'      => $this->get_style_presets(),
+            ] );
+        }
     }
 
 	/**
@@ -212,6 +228,89 @@ class AMS_Admin_Settings {
             [ 'ams_chat_title', 'sanitize_text_field' ],
             [ 'ams_widget_title_color', 'sanitize_hex_color' ]
         ];
+    }
+
+    private function get_style_presets(): array {
+        return [
+            'light' => [
+                'ams_widget_title_color'    => '#ffffff',
+                'ams_primary_gradient_start'=> '#667eea',
+                'ams_primary_gradient_end'  => '#764ba2',
+                'ams_primary_gradient_color'=> '#ffffff',
+                'ams_primary_color'         => '#764ba2',
+                'ams_primary_hover'         => '#6769cb',
+                'ams_secondary_color'       => '#6769cb',
+                'ams_text_primary'          => '#333333',
+                'ams_text_secondary'        => '#666666',
+                'ams_text_light'            => '#999999',
+                'ams_background'            => '#ffffff',
+                'ams_background_light'      => '#f8f9fa',
+                'ams_border_color'          => '#e0e0e0',
+                'ams_border_light'          => '#dddddd',
+            ],
+            'dark' => [
+                'ams_widget_title_color'    => '#ffffff',
+                'ams_primary_gradient_start'=> '#7b2ff7',
+                'ams_primary_gradient_end'  => '#f107a3',
+                'ams_primary_gradient_color'=> '#fefcff',
+                'ams_primary_color'         => '#b144ff',
+                'ams_primary_hover'         => '#cc66ff',
+                'ams_secondary_color'       => '#6f59d9',
+                'ams_text_primary'          => '#efe9ff',
+                'ams_text_secondary'        => '#c2b7dc',
+                'ams_text_light'            => '#9788bd',
+                'ams_background'            => '#16052f',
+                'ams_background_light'      => '#22103d',
+                'ams_border_color'          => '#5e3f8f',
+                'ams_border_light'          => '#7d61b0',
+            ],
+            'warm_pastel' => [
+                'ams_widget_title_color'    => '#ffffff',
+                'ams_primary_gradient_start'=> '#d57a8c',
+                'ams_primary_gradient_end'  => '#c9875e',
+                'ams_primary_gradient_color'=> '#ffffff',
+                'ams_primary_color'         => '#bc6b53',
+                'ams_primary_hover'         => '#a95a45',
+                'ams_secondary_color'       => '#b8899f',
+                'ams_text_primary'          => '#2f2521',
+                'ams_text_secondary'        => '#5b4b45',
+                'ams_text_light'            => '#8a7a73',
+                'ams_background'            => '#fff8f3',
+                'ams_background_light'      => '#f7e5db',
+                'ams_border_color'          => '#e2c6b8',
+                'ams_border_light'          => '#edd8cd',
+            ],
+            'clean' => [
+                'ams_widget_title_color'    => '#ffffff',
+                'ams_primary_gradient_start'=> '#1f7ae0',
+                'ams_primary_gradient_end'  => '#24b3ff',
+                'ams_primary_gradient_color'=> '#ffffff',
+                'ams_primary_color'         => '#1889eb',
+                'ams_primary_hover'         => '#0f76ce',
+                'ams_secondary_color'       => '#23a8f6',
+                'ams_text_primary'          => '#1f2937',
+                'ams_text_secondary'        => '#4b5563',
+                'ams_text_light'            => '#9ca3af',
+                'ams_background'            => '#ffffff',
+                'ams_background_light'      => '#f4f9ff',
+                'ams_border_color'          => '#d5e6f7',
+                'ams_border_light'          => '#e7f0fa',
+            ],
+        ];
+    }
+
+    public function handle_connection_check(): void {
+        check_ajax_referer( 'ams_sync', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions' ], 403 );
+        }
+
+        $result = AMS_Api_Messenger::get()->validate_connection();
+        wp_send_json_success( [
+            'connected' => ! empty( $result['success'] ),
+            'message'   => $result['message'] ?? '',
+        ] );
     }
 
 }

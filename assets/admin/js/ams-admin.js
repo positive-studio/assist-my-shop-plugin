@@ -65,7 +65,47 @@
         }, 2000);
     }
 
+    function updateConnectionUI(connected, message) {
+        const indicator = document.getElementById('ams-connection-indicator');
+        const text = document.getElementById('ams-connection-status-text');
+        if (!indicator || !text) return;
+
+        indicator.style.background = connected ? '#16a34a' : '#dc2626';
+        text.textContent = connected
+            ? 'Connected'
+            : `Not connected${message ? ': ' + message : ''}`;
+    }
+
+    function checkConnectionStatus() {
+        const indicator = document.getElementById('ams-connection-indicator');
+        const text = document.getElementById('ams-connection-status-text');
+        if (!indicator || !text) return;
+
+        indicator.style.background = '#9ca3af';
+        text.textContent = 'Checking connection...';
+
+        fetch(ajaxUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                action: 'ams_check_connection',
+                nonce: nonce
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (!data || !data.success || !data.data) {
+                    updateConnectionUI(false, 'Unexpected response');
+                    return;
+                }
+                updateConnectionUI(!!data.data.connected, data.data.message || '');
+            })
+            .catch(() => updateConnectionUI(false, 'Request failed'));
+    }
+
     document.addEventListener('DOMContentLoaded', function(){
+        checkConnectionStatus();
+
         const btn = document.getElementById('ams-sync-now');
         if (!btn) return;
         btn.addEventListener('click', function(){
