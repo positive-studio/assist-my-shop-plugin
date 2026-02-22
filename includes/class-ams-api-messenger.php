@@ -24,6 +24,10 @@ class AMS_Api_Messenger {
 		$this->define_properties();
 	}
 
+	private static function get_base_url(): string {
+		return defined( 'AMS_API_BASE_URL' ) ? AMS_API_BASE_URL : self::API_BASE_URL;
+	}
+
 	/**
 	 * Define class properties from WordPress options.
 	 *
@@ -46,7 +50,7 @@ class AMS_Api_Messenger {
 			AMS_Logger::log( 'Sending request to SaaS API', [ 'endpoint' => $endpoint, 'payload' => $data ], 'debug' );
 		}
 
-		$response = wp_remote_post( self::API_BASE_URL . $endpoint, [
+		$response = wp_remote_post( self::get_base_url() . $endpoint, [
 			'headers' => [
 				'Content-Type' => 'application/json',
 			],
@@ -109,7 +113,7 @@ class AMS_Api_Messenger {
 		// Use cURL for streaming response
 		$ch = curl_init();
 
-		curl_setopt( $ch, CURLOPT_URL, self::API_BASE_URL . $endpoint );
+		curl_setopt( $ch, CURLOPT_URL, self::get_base_url() . $endpoint );
 		curl_setopt( $ch, CURLOPT_POST, true );
 		curl_setopt( $ch, CURLOPT_POSTFIELDS, wp_json_encode( $data ) );
 		curl_setopt( $ch, CURLOPT_HTTPHEADER, [

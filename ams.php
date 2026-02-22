@@ -2,7 +2,6 @@
 /**
  * Plugin Name: Assist My Shop
  * Plugin URI: https://assistmyshop.com
- * Update URI: https://github.com/positive-studio/assist-my-shop-plugin
  * Description: An AI-powered customer support plugin for WooCommerce and WordPress. Provides a chat widget that integrates with your store's data to assist customers in real-time.
  * Version: 1.1.6
  * Author: Pryvus Inc.
@@ -50,6 +49,40 @@ class AMS_WP_Plugin {
 		$github_token = get_option( 'ams_github_token', '' );
 		new AMS_GitHub_Updater( __FILE__, 'positive-studio/assist-my-shop-plugin', $github_token );
 
+
+
+		// Add plugin action link in plugins list to toggle auto-updates
+		add_action( 'admin_post_ams_toggle_auto_update', [ $this, 'handle_toggle_auto_update' ] );
+	}
+
+	/**
+	 * Handle toggle auto-update action.
+	 */
+	public function handle_toggle_auto_update(): void {
+		if ( ! current_user_can( 'update_plugins' ) ) {
+			wp_die( 'Insufficient permissions' );
+		}
+
+		if ( ! isset( $_REQUEST['_wpnonce'] ) || ! wp_verify_nonce( $_REQUEST['_wpnonce'], 'ams_toggle_auto_update' ) ) {
+			wp_die( 'Invalid nonce' );
+		}
+
+		$action = isset( $_REQUEST['ams_action'] ) && $_REQUEST['ams_action'] === 'enable' ? 'enable' : 'disable';
+
+		$plugin = plugin_basename( __FILE__ );
+		$auto_updates = (array) get_option( 'auto_update_plugins', [] );
+		if ( $action === 'enable' ) {
+			if ( ! in_array( $plugin, $auto_updates, true ) ) {
+				$auto_updates[] = $plugin;
+			}
+		} else {
+			$auto_updates = array_values( array_diff( $auto_updates, [ $plugin ] ) );
+		}
+		update_option( 'auto_update_plugins', $auto_updates );
+
+		$redirect = wp_get_referer() ? wp_get_referer() : admin_url( 'plugins.php' );
+		wp_safe_redirect( $redirect );
+		exit;
 	}
 
 	private function define_constants() {
@@ -195,21 +228,21 @@ class AMS_WP_Plugin {
 		$border_light             = sanitize_hex_color( $styles['border_light'] ?? '#ddd' );
 
 		$custom_css = ":root {" .
-			"--ams-chat-title-color: " . esc_attr( $ams_widget_title_color ) . ";" .
-			"--ams-primary-gradient-start: " . esc_attr( $primary_gradient_start ) . ";" .
-			"--ams-primary-gradient-end: " . esc_attr( $primary_gradient_end ) . ";" .
-			"--ams-primary-gradient-color: " . esc_attr( $primary_gradient_color ) . ";" .
-			"--ams-primary-color: " . esc_attr( $primary_color ) . ";" .
-			"--ams-primary-hover: " . esc_attr( $primary_hover ) . ";" .
-			"--ams-secondary-color: " . esc_attr( $secondary_color ) . ";" .
-			"--ams-text-primary: " . esc_attr( $text_primary ) . ";" .
-			"--ams-text-secondary: " . esc_attr( $text_secondary ) . ";" .
-			"--ams-text-light: " . esc_attr( $text_light ) . ";" .
-			"--ams-background: " . esc_attr( $background ) . ";" .
-			"--ams-background-light: " . esc_attr( $background_light ) . ";" .
-			"--ams-border-color: " . esc_attr( $border_color ) . ";" .
-			"--ams-border-light: " . esc_attr( $border_light ) . ";" .
-			"}";
+					  "--ams-chat-title-color: " . esc_attr( $ams_widget_title_color ) . ";" .
+					  "--ams-primary-gradient-start: " . esc_attr( $primary_gradient_start ) . ";" .
+					  "--ams-primary-gradient-end: " . esc_attr( $primary_gradient_end ) . ";" .
+					  "--ams-primary-gradient-color: " . esc_attr( $primary_gradient_color ) . ";" .
+					  "--ams-primary-color: " . esc_attr( $primary_color ) . ";" .
+					  "--ams-primary-hover: " . esc_attr( $primary_hover ) . ";" .
+					  "--ams-secondary-color: " . esc_attr( $secondary_color ) . ";" .
+					  "--ams-text-primary: " . esc_attr( $text_primary ) . ";" .
+					  "--ams-text-secondary: " . esc_attr( $text_secondary ) . ";" .
+					  "--ams-text-light: " . esc_attr( $text_light ) . ";" .
+					  "--ams-background: " . esc_attr( $background ) . ";" .
+					  "--ams-background-light: " . esc_attr( $background_light ) . ";" .
+					  "--ams-border-color: " . esc_attr( $border_color ) . ";" .
+					  "--ams-border-light: " . esc_attr( $border_light ) . ";" .
+					  "}";
 
 		wp_add_inline_style( 'ams-chat', $custom_css );
 	}
@@ -234,12 +267,20 @@ class AMS_WP_Plugin {
 	}
 
 	private function get_localize_object(): array {
+		$currency_code   = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'USD';
+		$currency_symbol = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol( $currency_code ) : '$';
+		$cart_url        = function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/cart/' );
+
 		return [
 			'AmsAjax'     => [
 				'ajax_url'          => admin_url( 'admin-ajax.php' ),
 				'nonce'             => wp_create_nonce( 'ams_chat' ),
 				'store_url'         => home_url(),
 				'streaming_enabled' => false, // Disabled for OpenAI, only Ollama supports streaming
+				'cart_url'          => $cart_url,
+				'currency_code'     => $currency_code,
+				'currency_symbol'   => $currency_symbol,
+				'locale'            => str_replace( '_', '-', get_locale() ),
 			],
 			'assistantName' => get_option( 'ams_assistant_name', '' ),
 		];
