@@ -9,13 +9,26 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+/**
+ * Progress state storage helper for background sync.
+ */
 class AMS_Sync_Progress {
 
     private static ?AMS_Sync_Progress $instance = null;
 
+    /**
+     * Constructor.
+     *
+     * @return void
+     */
     private function __construct() {
     }
 
+    /**
+     * Get singleton instance.
+     *
+     * @return AMS_Sync_Progress Shared instance.
+     */
     public static function get(): AMS_Sync_Progress {
         if ( is_null( self::$instance ) ) {
             self::$instance = new self();

@@ -11,14 +11,28 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
+/**
+ * Content extraction helper that builds sync payload batches.
+ */
 class AMS_Content_Batcher {
 
     // Default batch size for iterative loaders to avoid loading all items at once
     private const DEFAULT_BATCH_SIZE = 100;
 
+    /**
+     * Constructor.
+     *
+     * @return void
+     */
     public function __construct() {
     }
 
+    /**
+     * Collect all posts for a post type in batches.
+     *
+     * @param string $post_type Post type slug.
+     * @return array<int, array<string, mixed>> Aggregated post payloads.
+     */
     public function get_posts_data( string $post_type ): array {
         // Use batched loader to avoid loading all posts into memory at once.
         $all = [];
@@ -45,6 +59,11 @@ class AMS_Content_Batcher {
         return $all;
     }
 
+    /**
+     * Collect all WooCommerce products in batches.
+     *
+     * @return array<int, array<string, mixed>> Aggregated product payloads.
+     */
     public function get_products_data(): array {
         if ( ! function_exists( 'wc_get_products' ) ) {
             return [];
@@ -72,6 +91,14 @@ class AMS_Content_Batcher {
         return $all;
     }
 
+    /**
+     * Fetch one batch of posts for a post type.
+     *
+     * @param string $post_type Post type slug.
+     * @param int    $limit     Maximum number of posts to return.
+     * @param int    $offset    Query offset.
+     * @return array<int, array<string, mixed>> Post payload batch.
+     */
     public function get_posts_data_batch( string $post_type, int $limit, int $offset ): array {
         // Use WP_Query to fetch only IDs first to reduce memory usage
         $args = [
@@ -132,6 +159,13 @@ class AMS_Content_Batcher {
         return $posts_data;
     }
 
+    /**
+     * Fetch one batch of WooCommerce products.
+     *
+     * @param int $limit  Maximum number of products to return.
+     * @param int $offset Query offset.
+     * @return array<int, array<string, mixed>> Product payload batch.
+     */
     public function get_products_data_batch( int $limit, int $offset ): array {
         if ( ! function_exists( 'wc_get_products' ) ) {
             return [];
@@ -208,6 +242,9 @@ class AMS_Content_Batcher {
 
     /**
      * Return all WooCommerce product attributes (global + custom) in a normalized format.
+     *
+     * @param int $product_id WooCommerce product ID.
+     * @return array<int, array<string, mixed>> Normalized attribute payload.
      */
     private function get_product_attributes_data( int $product_id ): array {
         if ( ! function_exists( 'wc_get_product' ) ) {
@@ -267,6 +304,12 @@ class AMS_Content_Batcher {
         return $normalized;
     }
 
+    /**
+     * Fetch the latest WooCommerce orders for sync payload.
+     *
+     * @param int $limit Number of latest orders to return.
+     * @return array<int, array<string, mixed>> Order payload batch.
+     */
     public function get_orders_batch( int $limit = 50 ): array {
         if ( ! function_exists( 'wc_get_orders' ) ) {
             return [];
@@ -285,7 +328,6 @@ class AMS_Content_Batcher {
                 'status'         => $order->get_status(),
                 'total'          => $order->get_total(),
                 'date_created'   => $order->get_date_created()->date( 'Y-m-d H:i:s' ),
-                'customer_email' => $order->get_billing_email(),
                 'items'          => array_map( function ( $item ) {
                     return [
                         'name'     => $item->get_name(),
